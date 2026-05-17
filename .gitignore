@@ -42,6 +42,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Phase completion summaries (optional - can be committed if desired)
+# PHASE_*_COMPLETE.md
+
 # prisma
 /prisma/migrations/*_migration.sql
 
@@ -87,3 +90,17 @@ lerna-debug.log*
 # Backup files
 *.bak
 *.backup
+
+# npm package lock (if using different package managers)
+# Uncomment if team uses yarn or pnpm exclusively
+# package-lock.json
+
+# Downloaded lead images (will be in Supabase/S3 in production)
+/public/uploads/
+/public/lead-images/
+
+# Local development files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
