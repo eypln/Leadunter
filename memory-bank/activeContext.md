@@ -1,0 +1,140 @@
+# Active Context: Lead Hunter
+
+## Current Status
+**Phase**: Project Initialization (PHASE 0)
+**Date**: May 17, 2026
+**Progress**: 100% - Ready for Phase 1
+
+## What We're Working On Now
+✅ **COMPLETED**: Foundational structure for the Lead Hunter application:
+
+1. ✅ Memory bank structure created (all 6 core files)
+2. ✅ Project file structure defined (PROJECT_STRUCTURE.md)
+3. ✅ Environment configuration created (.env.example)
+4. ✅ Project intelligence documented (.clinerules)
+5. ✅ README.md created with setup instructions
+
+**NEXT**: Awaiting user confirmation to proceed with Phase 1 (Database & Authentication)
+
+## Recent Changes
+- ✅ Created complete memory bank documentation (6 files)
+- ✅ Created `.env.example` with comprehensive configuration
+- ✅ Created `PROJECT_STRUCTURE.md` with detailed file structure
+- ✅ Created `.clinerules` for project intelligence
+- ✅ Created `README.md` with setup instructions
+- ✅ Defined 10-phase implementation roadmap in `progress.md`
+- ✅ **UPDATED**: Added dual lead type support (OWNER/CLIENT)
+- ✅ **UPDATED**: Added image download strategy (on-demand after approval)
+- ✅ **UPDATED**: Added CLIENT lead handling (Facebook comment template)
+- ✅ **UPDATED**: Updated database schema with LeadType enum and image fields
+
+## Next Immediate Steps
+
+### Step 1: Project Structure Setup
+Create the Next.js project structure with:
+- `/app` directory (App Router)
+- `/components` directory
+- `/lib` directory (utilities, database, AI services)
+- `/prisma` directory (schema and migrations)
+- `/scraper` directory (separate worker)
+- Configuration files (`.env.example`, `tailwind.config.js`, etc.)
+
+### Step 2: Environment Configuration
+Provide `.env.example` with all required API keys and configuration:
+- Database connection
+- NextAuth configuration
+- Facebook OAuth credentials
+- AI API keys
+- Scraper settings
+
+### Step 3: Database Schema
+Define Prisma schema with tables:
+- `users`: Authentication and user data
+- `leads`: Scraped property listings with **leadType** (OWNER/CLIENT), **imageUrls** (JSON), **imagesDownloaded** (Boolean)
+- `lead_images`: Downloaded images (created after approval)
+- `messages`: Generated outreach messages (contextual by lead type)
+- `scraping_jobs`: Job tracking and analytics
+
+### Step 4: Authentication Setup
+Implement NextAuth.js with Facebook OAuth:
+- Configure Facebook provider
+- Create auth API routes
+- Setup session management
+- Protect routes with middleware
+
+## Active Decisions & Considerations
+
+### Decision 1: Dual Lead Type System ✅ CONFIRMED
+**Options**: Single lead type (OWNER only) vs Dual lead types (OWNER + CLIENT)
+**Decision**: Dual lead type system
+**Reasoning**: 
+- OWNER leads: Property owners offering rentals (filter agents, score intent)
+- CLIENT leads: People looking to rent (all are opportunities, no scoring needed)
+- Different messaging strategies per type
+- Maximizes business opportunities
+**Status**: Confirmed by user
+
+### Decision 2: Image Download Strategy ✅ CONFIRMED
+**Options**: Auto-download during scraping vs On-demand after approval
+**Decision**: On-demand after manual approval
+**Reasoning**:
+- Prevents database bloat from unused leads
+- Saves storage costs (images can be large)
+- User reviews lead first, then decides to download
+- Only approved leads consume storage
+**Status**: Confirmed by user
+
+### Decision 3: Scraper Language
+**Options**: Node.js (TypeScript) vs Python
+**Leaning Towards**: Node.js for consistency with Next.js
+**Reasoning**: 
+- Same language across stack
+- Easier to share types and utilities
+- Team familiarity
+**Status**: Awaiting user confirmation
+
+### Decision 4: Database Provider
+**Options**: Supabase vs Self-hosted PostgreSQL
+**Leaning Towards**: Supabase for MVP
+**Reasoning**:
+- Faster setup
+- Built-in Storage for images
+- Built-in real-time features
+- Free tier sufficient for testing
+- Can migrate later if needed
+**Status**: Awaiting user confirmation
+
+### Decision 5: AI Provider
+**Options**: OpenAI vs Anthropic Claude
+**Leaning Towards**: OpenAI (GPT-3.5-turbo)
+**Reasoning**:
+- Lower cost for MVP
+- Faster response times
+- Well-documented API
+- Can upgrade to GPT-4 later
+**Status**: Awaiting user confirmation
+
+## Current Blockers
+None - ready to proceed with implementation
+
+## Questions for User
+1. Do you have Facebook Developer credentials ready, or do we need to set that up?
+2. Do you have an OpenAI API key, or should we use Claude?
+3. Preferred database: Supabase (easier) or self-hosted PostgreSQL (more control)?
+4. Do you want to start with the Next.js app first, or set up the scraper simultaneously?
+
+## Context for Next Session
+When resuming work:
+1. Read all memory bank files (especially `progress.md` for current phase)
+2. Check this file for latest decisions and blockers
+3. Review `progress.md` to see which tasks are completed
+4. Continue from the next incomplete task in the current phase
+
+## Notes
+- User provided a reference image showing the desired dashboard UI (dark theme, stats cards, lead feed, demand signals)
+- User wants step-by-step implementation with confirmation after each major module
+- User is in Malta timezone, real estate business context
+- Project name is "Lead Hunter" (also referred to as "ListingHunter" in folder name)
+- **NEW**: System must handle TWO lead types (OWNER and CLIENT)
+- **NEW**: Images downloaded only after manual approval (not during scraping)
+- **NEW**: CLIENT leads get simple Facebook comment, not personalized messages

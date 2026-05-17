@@ -1,0 +1,188 @@
+# Lead Hunter - Project Intelligence
+
+## Critical Implementation Paths
+
+### Authentication Flow
+- MUST use Facebook OAuth ONLY (no other providers)
+- NextAuth.js v5 (Auth.js) is the required library
+- Session management handled by NextAuth
+
+### Scraper Architecture
+- NEVER run scraper in Next.js API routes (Vercel timeout limits)
+- Scraper MUST be separate worker service (Railway/VPS recommended)
+- Use Playwright for Facebook scraping (handles JavaScript rendering)
+- Implement randomized delays to avoid rate limiting
+
+### Message Sending Strategy
+- NEVER fully automate message sending (risk of account bans)
+- Generate message drafts in database
+- Provide 1-click send via `wa.me` and `m.me` links
+- User maintains final control over sending
+
+## User Preferences & Workflow
+
+### Development Approach
+- User wants step-by-step implementation with confirmation after each major module
+- Do NOT write entire application in one response
+- Ask for confirmation before moving to next phase
+- User is comfortable with technical details
+
+### UI/UX Preferences
+- Dark theme is REQUIRED (not optional)
+- Premium SaaS aesthetic (reference image provided)
+- Analytics-focused dashboard with clear metrics
+- Mobile-responsive design (future PWA conversion planned)
+
+### Business Context
+- User is in Malta real estate market (Quicklets/QL Prime)
+- Target: Direct property owners (not agents)
+- Agent detection is critical (>5 posts = agent)
+- Phone number extraction is high priority (enables WhatsApp)
+
+## Project-Specific Patterns
+
+### Lead Type Classification
+**CRITICAL**: System handles TWO distinct lead types:
+
+1. **OWNER Leads** (Property owners offering rentals):
+   - Require agent detection (>5 posts = agent, skip)
+   - Require intent scoring (1-10)
+   - Generate personalized WhatsApp/Messenger messages
+   - Download images after manual approval
+
+2. **CLIENT Leads** (People looking to rent):
+   - No agent detection needed (all are potential clients)
+   - No intent scoring needed
+   - Generate simple Facebook comment: "Contact for options"
+   - Download images after manual approval
+
+### Image Handling Strategy
+**CRITICAL**: Images are NOT downloaded automatically
+- During scraping: Extract and store image URLs only (JSON array)
+- After user approval: Trigger download to Supabase Storage/S3
+- Rationale: Prevent database bloat, save storage costs
+- Implementation: `imagesDownloaded` boolean flag + `LeadImage` table
+
+### Message Templates
+Two distinct templates based on lead type:
+
+**OWNER Leads** (based on phone availability):
+1. **Template A (Phone Found)**: WhatsApp message, mentions "Erhan" and "QL Prime"
+2. **Template B (No Phone)**: Messenger message, mentions "Quicklets" and provides WhatsApp number +35699690055
+
+**CLIENT Leads**:
+3. **Template C (Facebook Comment)**: Simple comment "Contact for options" posted on their rental search post
+
+### Intent Keywords
+
+**OWNER Lead Keywords** (property owners offering rentals):
+- "owner"
+- "direct owner"
+- "direct from owner"
+- "no agency fee"
+- "no commission"
+- "for rent"
+- "to let"
+- "available"
+
+**CLIENT Lead Keywords** (people looking to rent):
+- "looking for rent"
+- "looking for apartment"
+- "looking for let"
+- "need apartment"
+- "searching for flat"
+- "want to rent"
+- "need accommodation"
+
+### Agent Detection Signals (OWNER Leads Only)
+- Post count >5 rental properties
+- Keywords: "agency", "commission", "professional service"
+- Business page vs personal profile
+- AI contextual analysis
+
+## Known Challenges
+
+### Facebook Scraping
+- Facebook actively blocks bots (use stealth mode)
+- Login required for most content
+- Dynamic JavaScript rendering (Playwright essential)
+- Rate limiting (scrape conservatively, every 6 hours max)
+
+### Vercel Limitations
+- 10s timeout on Hobby plan, 60s on Pro
+- Cannot run long-running processes
+- Cold starts may affect first request
+- Solution: Separate worker architecture
+
+### AI API Costs
+- OpenAI GPT-3.5-turbo: ~$0.01 per lead analysis
+- Budget: ~$10/month for 1000 leads
+- Optimization: Cache results, batch requests
+
+## Evolution of Project Decisions
+
+### Database Choice
+- Leaning towards Supabase for MVP (easier setup, free tier)
+- Can migrate to self-hosted PostgreSQL later if needed
+- Prisma ORM for type safety and migrations
+
+### AI Provider
+- Starting with OpenAI GPT-3.5-turbo (cost-effective)
+- Can upgrade to GPT-4 or switch to Claude later
+- **Primary use cases**:
+  1. Lead classification (OWNER vs CLIENT)
+  2. Intent scoring (OWNER leads only, 1-10)
+  3. Agent detection (OWNER leads only)
+  4. Message personalization (contextual by lead type)
+
+### Scraper Language
+- Node.js (TypeScript) preferred for consistency with Next.js
+- Same language across stack simplifies development
+- Easier to share types and utilities
+
+## Tool Usage Patterns
+
+### Development Tools
+- Next.js 14+ with App Router (not Pages Router)
+- Tailwind CSS for styling (no CSS-in-JS)
+- Lucide React for icons (consistent, modern)
+- Prisma for database (type-safe, great DX)
+
+### Deployment Strategy
+- Next.js app: Vercel (native support, automatic deployments)
+- Scraper worker: Railway (recommended) or DigitalOcean VPS
+- Database: Supabase (hosted PostgreSQL with real-time features)
+
+## Security & Compliance
+
+### Environment Variables
+- ALL secrets in `.env` file (never committed)
+- Separate `.env.local` for development
+- Vercel environment variables for production
+
+### Data Privacy
+- No storage of Facebook passwords
+- Phone numbers should be encrypted at rest
+- GDPR-compliant data retention policies
+
+### Rate Limiting
+- Scraper: Randomized delays between requests
+- API: Rate limit per user/IP
+- AI calls: Queue system to avoid quota exhaustion
+
+## Future Considerations
+
+### PWA Conversion (Phase 10)
+- Add manifest.json
+- Service worker for offline support
+- Push notifications for new leads
+- Install prompt for mobile users
+
+### Scaling Strategy
+- Current: Single scraper instance, Supabase free tier
+- Future: Multiple scraper workers, Redis cache, database read replicas
+
+---
+
+**Last Updated**: Project initialization
+**Next Review**: After Phase 1 (Database & Authentication) completion
