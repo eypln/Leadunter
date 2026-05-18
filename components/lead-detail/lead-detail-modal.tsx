@@ -172,7 +172,7 @@ export function LeadDetailModal({
               </div>
 
               {/* Content */}
-              <div className="overflow-y-auto max-h-[calc(90vh-180px)] p-6 space-y-6">
+              <div className="overflow-y-auto max-h-[calc(90vh-240px)] p-6 space-y-6">
                 {loading ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
@@ -298,22 +298,63 @@ export function LeadDetailModal({
                       </div>
 
                       {message && (
-                        <div className="relative">
-                          <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-                            <p className="text-gray-300 whitespace-pre-wrap">
-                              {message}
-                            </p>
+                        <div className="space-y-3">
+                          <div className="relative">
+                            <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                              <p className="text-gray-300 whitespace-pre-wrap">
+                                {message}
+                              </p>
+                            </div>
+                            <button
+                              onClick={copyMessage}
+                              className="absolute top-2 right-2 p-2 bg-gray-900 hover:bg-gray-800 rounded-lg transition-colors"
+                            >
+                              {copied ? (
+                                <Check className="w-4 h-4 text-green-400" />
+                              ) : (
+                                <Copy className="w-4 h-4 text-gray-400" />
+                              )}
+                            </button>
                           </div>
-                          <button
-                            onClick={copyMessage}
-                            className="absolute top-2 right-2 p-2 bg-gray-900 hover:bg-gray-800 rounded-lg transition-colors"
-                          >
-                            {copied ? (
-                              <Check className="w-4 h-4 text-green-400" />
-                            ) : (
-                              <Copy className="w-4 h-4 text-gray-400" />
-                            )}
-                          </button>
+
+                          {/* 1-Click Send Buttons */}
+                          {lead.lead_type === 'OWNER' && (
+                            <div className="flex gap-2">
+                              {lead.phone ? (
+                                <a
+                                  href={`https://wa.me/${lead.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
+                                >
+                                  <MessageSquare className="w-5 h-5" />
+                                  Send via WhatsApp
+                                </a>
+                              ) : (
+                                <a
+                                  href={`https://m.me/${lead.author_id}?text=${encodeURIComponent(message)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                                >
+                                  <MessageSquare className="w-5 h-5" />
+                                  Send via Messenger
+                                </a>
+                              )}
+                            </div>
+                          )}
+
+                          {lead.lead_type === 'CLIENT' && (
+                            <a
+                              href={lead.post_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                            >
+                              <MessageSquare className="w-5 h-5" />
+                              Comment on Facebook Post
+                            </a>
+                          )}
                         </div>
                       )}
                     </div>

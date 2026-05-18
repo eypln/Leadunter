@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { leadRepository } from '@/lib/repositories/lead-repository';
+import { geminiService } from '@/lib/ai/gemini-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,35 +20,24 @@ export async function POST(request: NextRequest) {
     let message = '';
 
     if (lead.lead_type === 'OWNER') {
-      // OWNER lead message templates
-      if (lead.phone) {
-        // Template A: WhatsApp (Phone found)
-        message = `Hi ${lead.author_name},
-
-I hope you're doing well! I'm Erhan, a letting specialist at QL Prime. My team and I specialize in helping landlords like you to find reliable, long-term tenants quickly and ensure a hassle-free letting process.
-
-I came across your property listing in ${lead.location || 'Malta'} and would love to discuss how we can help you find the perfect tenant.
-
-If you're interested in our service, we'd be happy to answer any questions.
-
-Looking forward to working together.
-Best regards`;
-      } else {
-        // Template B: Messenger (No phone)
-        message = `Hi ${lead.author_name},
-
-I hope you're doing well! I'm an agent at Quicklets.
-
-My team and I specialize in helping landlords like you to find reliable, long-term tenants quickly and ensure a hassle-free letting process.
-
-If you're interested in our service, we'd be happy to answer any questions via WhatsApp +35699690055.
-
-Looking forward to working together.
-Best regards`;
-      }
+      // OWNER lead: AI-generated personalized message
+      message = await geminiService.generateOwnerMessage({
+        title: lead.title,
+        description: lead.description,
+        author_name: lead.author_name,
+        location: lead.location,
+        phone: lead.phone,
+        price: lead.price,
+      });
     } else {
-      // CLIENT lead message template
-      message = 'Contact for options';
+      // CLIENT lead: AI-generated short comment
+      message = await geminiService.generateClientMessage({
+        title: lead.title,
+        description: lead.description,
+        author_name: lead.author_name,
+        location: lead.location,
+        price: lead.price,
+      });
     }
 
     return NextResponse.json({
