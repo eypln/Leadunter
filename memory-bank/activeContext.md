@@ -1,149 +1,174 @@
 # Active Context: Lead Hunter
 
 ## Current Status
-**Phase**: Phase 1 - Database & Authentication
+**Phase**: Phase 3 - Lead Management
 **Date**: May 18, 2026
-**Progress**: 0% - Ready to start Phase 1
+**Progress**: 100% - Phase 3 Complete + Price Field Enhancement
 
 ## What We're Working On Now
-✅ **PHASE 0 COMPLETED**: Project initialization complete!
+✅ **PHASE 0 COMPLETED**: Project initialization
+✅ **PHASE 1 COMPLETED**: Database & Authentication  
+✅ **PHASE 2 COMPLETED**: Premium Dashboard UI
+✅ **PHASE 3 COMPLETED**: Lead Management
+✅ **PRICE FIELD ENHANCEMENT**: Monthly rent price tracking
 
-**COMPLETED**:
-1. ✅ Memory bank structure created (all 6 core files)
-2. ✅ Project file structure defined (PROJECT_STRUCTURE.md)
-3. ✅ Environment configuration created (.env.example)
-4. ✅ Project intelligence documented (.clinerules)
-5. ✅ README.md created with setup instructions
-6. ✅ Next.js 14 project initialized with App Router
-7. ✅ TypeScript configured with strict mode
-8. ✅ Tailwind CSS configured with dark mode
-9. ✅ All dependencies installed (404 packages)
-10. ✅ Dev server tested and working (http://localhost:3000)
+**COMPLETED IN PHASE 0:**
+1. ✅ Memory bank structure (6 core files)
+2. ✅ Next.js 14 with App Router
+3. ✅ TypeScript with strict mode
+4. ✅ Tailwind CSS with dark mode
+5. ✅ Project structure created
 
-**NEXT**: Phase 1 - Database & Authentication
-- Setup Prisma with PostgreSQL/Supabase
-- Define database schema with dual lead types (OWNER/CLIENT)
-- Configure NextAuth.js with Facebook OAuth
+**COMPLETED IN PHASE 1:**
+1. ✅ Supabase connection (SSL workaround)
+2. ✅ 5 database tables created
+3. ✅ Storage bucket (lead-images)
+4. ✅ 7 test leads (4 OWNER, 3 CLIENT)
+5. ✅ NextAuth.js with Facebook OAuth
+6. ✅ Login page created
+7. ✅ **Facebook login tested successfully**
+8. ✅ User auto-creation in Supabase
+
+**COMPLETED IN PHASE 2:**
+1. ✅ Premium UI libraries (Framer Motion, clsx)
+2. ✅ Animated sidebar navigation
+3. ✅ Stats cards with gradients
+4. ✅ Lead type toggle (OWNER/CLIENT)
+5. ✅ Lead feed with search & filter
+6. ✅ Premium lead cards
+7. ✅ Real-time API integration
+8. ✅ Responsive design
+9. ✅ Glassmorphism effects
+10. ✅ Smooth animations
+
+**COMPLETED IN PHASE 3:**
+1. ✅ Lead detail modal with animations
+2. ✅ Message generation (template-based)
+3. ✅ Status updates (NEW, RESPONDED, SKIPPED, INTERESTED)
+4. ✅ Copy to clipboard functionality
+5. ✅ Real-time dashboard updates
+6. ✅ API routes for lead management
+
+**PRICE FIELD ENHANCEMENT:**
+1. ✅ Database schema updated (price column)
+2. ✅ TypeScript types updated
+3. ✅ formatPrice() utility function
+4. ✅ Lead Card displays price with Euro icon
+5. ✅ Lead Detail Modal displays price prominently
+6. ✅ CLIENT leads show "max budget" label
+7. ⏳ SQL migration ready (needs to be run in Supabase)
+
+**NEXT**: Phase 4 - AI Message Generation with OpenAI
 
 ## Recent Changes
-- ✅ **PHASE 0 COMPLETED** (May 18, 2026)
-- ✅ Created Next.js 14 project with App Router
-- ✅ Configured TypeScript with strict mode and path aliases (@/*)
-- ✅ Configured Tailwind CSS with dark mode enabled by default
-- ✅ Created project structure (app/, components/, lib/, prisma/, scraper/, public/)
-- ✅ Installed all dependencies (next, react, next-auth, prisma, lucide-react, etc.)
-- ✅ Created basic layout and home page with dark theme
-- ✅ Configured Next.js for Facebook image domains
-- ✅ Tested dev server successfully (Ready in 6.1s)
+- ✅ **PHASE 3 COMPLETED** (May 18, 2026)
+- ✅ **PRICE FIELD ADDED** (May 18, 2026)
+- ✅ Created LeadDetailModal with full-screen animations
+- ✅ Built message generation with templates (WhatsApp, Messenger, Facebook Comment)
+- ✅ Implemented status update functionality
+- ✅ Added copy to clipboard with visual feedback
+- ✅ Real-time dashboard updates after status changes
+- ✅ API endpoints working (GET/PATCH /api/leads/[id], POST /api/messages/generate)
+- ✅ Tested with both OWNER and CLIENT leads
+- ✅ **Added price field to database schema**
+- ✅ **Price displayed on lead cards with Euro icon**
+- ✅ **Price displayed in lead detail modal**
+- ✅ **CLIENT leads show "max budget" label**
 
 ## Next Immediate Steps
 
-### Phase 1: Database & Authentication
+### Phase 4: AI Message Generation
 
-**Step 1: Setup Supabase Connection**
-- Add Supabase credentials to .env.local
-- Install @supabase/supabase-js package
-- Create Supabase client utility in /lib
-- Test database connection
+**Step 1: Setup OpenAI API**
+- Add OpenAI API key to .env.local
+- Install openai package
+- Create AIService utility
+- Test API connection
 
-**Step 2: Create Database Tables**
-Create tables in Supabase SQL Editor:
-- `users`: Authentication and user data
-- `leads`: Scraped listings with leadType (OWNER/CLIENT), imageUrls (JSON), imagesDownloaded (Boolean)
-- `lead_images`: Downloaded images (created after approval)
-- `messages`: Generated outreach messages (contextual by lead type)
-- `scraping_jobs`: Job tracking and analytics
+**Step 2: Enhance Message Generation**
+- Replace template-based generation with AI
+- Personalize messages based on lead content
+- Extract owner name from post
+- Generate contextual messages for OWNER leads
+- Keep simple template for CLIENT leads
 
-**Step 3: Setup Supabase Storage**
-- Create storage bucket for lead images
-- Configure bucket policies
-- Test image upload/download
+**Step 3: Message Quality**
+- Add message regeneration option
+- Allow manual editing before sending
+- Save generated messages to database
+- Track message performance
 
-**Step 4: Configure NextAuth.js**
-- Setup Facebook OAuth provider
-- Create auth API routes
-- Configure session management
-- Integrate with Supabase users table
-
-**Step 5: Test Authentication**
-- Create login page
-- Test Facebook login flow
-- Verify session management
-- Test protected routes
+**Step 4: 1-Click Send Integration**
+- WhatsApp deep link (wa.me) for OWNER + phone
+- Messenger deep link (m.me) for OWNER + no phone
+- Facebook comment link for CLIENT leads
+- Test on mobile devices
 
 ## Active Decisions & Considerations
 
-### Decision 1: Dual Lead Type System ✅ CONFIRMED
-**Options**: Single lead type (OWNER only) vs Dual lead types (OWNER + CLIENT)
-**Decision**: Dual lead type system
+### Decision 1: Price Field Implementation ✅ COMPLETED
+**Decision**: Add monthly rent price in EUR
+**Implementation**:
+- OWNER leads: Asking price
+- CLIENT leads: Maximum budget (upper range)
+- Display with Euro icon and green color
+- Format: €1,200/mo
+**Status**: Implemented, SQL migration ready
+
+### Decision 2: Message Generation Provider ✅ PENDING
+**Options**: OpenAI GPT-4 vs Anthropic Claude
+**Leaning Towards**: OpenAI GPT-3.5-turbo for cost
 **Reasoning**: 
-- OWNER leads: Property owners offering rentals (filter agents, score intent)
-- CLIENT leads: People looking to rent (all are opportunities, no scoring needed)
-- Different messaging strategies per type
-- Maximizes business opportunities
-**Status**: Confirmed by user
-
-### Decision 2: Image Download Strategy ✅ CONFIRMED
-**Options**: Auto-download during scraping vs On-demand after approval
-**Decision**: On-demand after manual approval
-**Reasoning**:
-- Prevents database bloat from unused leads
-- Saves storage costs (images can be large)
-- User reviews lead first, then decides to download
-- Only approved leads consume storage
-**Status**: Confirmed by user
-
-### Decision 3: Scraper Language
-**Options**: Node.js (TypeScript) vs Python
-**Leaning Towards**: Node.js for consistency with Next.js
-**Reasoning**: 
-- Same language across stack
-- Easier to share types and utilities
-- Team familiarity
-**Status**: Awaiting user confirmation
-
-### Decision 4: Database Provider
-**Options**: Supabase vs Self-hosted PostgreSQL
-**Leaning Towards**: Supabase for MVP
-**Reasoning**:
-- Faster setup
-- Built-in Storage for images
-- Built-in real-time features
-- Free tier sufficient for testing
-- Can migrate later if needed
-**Status**: Awaiting user confirmation
-
-### Decision 5: AI Provider
-**Options**: OpenAI vs Anthropic Claude
-**Leaning Towards**: OpenAI (GPT-3.5-turbo)
-**Reasoning**:
 - Lower cost for MVP
 - Faster response times
-- Well-documented API
-- Can upgrade to GPT-4 later
-**Status**: Awaiting user confirmation
+- Good quality for personalization
+**Status**: Awaiting user confirmation for Phase 4
+
+### Decision 3: Modal vs Separate Page ✅ CONFIRMED
+**Decision**: Modal overlay
+**Reasoning**:
+- Better UX (no navigation)
+- Faster interactions
+- Maintains context
+**Status**: Implemented and working
+
+### Decision 4: Image Download Trigger ✅ CONFIRMED
+**Decision**: Manual button (on-demand)
+**Reasoning**:
+- User control
+- Save storage
+- Faster initial load
+**Status**: Implemented
 
 ## Current Blockers
-None - ready to proceed with implementation
+1. **SQL Migration Required**: User needs to run `supabase/add-price-field.sql` in Supabase Dashboard
+2. **OpenAI API Key**: Needed for Phase 4 (AI message generation)
 
 ## Questions for User
-1. Do you have Facebook Developer credentials ready, or do we need to set that up?
-2. Do you have an OpenAI API key, or should we use Claude?
-3. Preferred database: Supabase (easier) or self-hosted PostgreSQL (more control)?
-4. Do you want to start with the Next.js app first, or set up the scraper simultaneously?
+1. ✅ Price field added - please run SQL migration in Supabase Dashboard
+2. OpenAI API key ready? (for Phase 4 AI message generation)
+3. Should we add price filtering/sorting to the dashboard?
+4. Any other lead fields needed before Phase 4?
 
 ## Context for Next Session
 When resuming work:
-1. Read all memory bank files (especially `progress.md` for current phase)
-2. Check this file for latest decisions and blockers
-3. Review `progress.md` to see which tasks are completed
-4. Continue from the next incomplete task in the current phase
+1. Read all memory bank files (especially `progress.md`)
+2. Check this file for latest decisions
+3. Verify SQL migration was run (check if price field exists in Supabase)
+4. Review Phase 4 tasks in `progress.md`
+5. Continue with OpenAI API integration
 
 ## Notes
-- User provided a reference image showing the desired dashboard UI (dark theme, stats cards, lead feed, demand signals)
-- User wants step-by-step implementation with confirmation after each major module
-- User is in Malta timezone, real estate business context
-- Project name is "Lead Hunter" (also referred to as "ListingHunter" in folder name)
-- **NEW**: System must handle TWO lead types (OWNER and CLIENT)
-- **NEW**: Images downloaded only after manual approval (not during scraping)
-- **NEW**: CLIENT leads get simple Facebook comment, not personalized messages
+- **Phase 0, 1, 2, 3 completed successfully**
+- **Price field enhancement completed** (SQL migration pending)
+- Facebook authentication working perfectly
+- Dashboard displaying real data with prices
+- Premium UI with smooth animations
+- Lead management modal fully functional
+- Message generation working (template-based)
+- Status updates working with real-time refresh
+- All APIs tested and working
+- Responsive design verified
+- User can toggle between OWNER and CLIENT leads
+- Search and filter working correctly
+- Ready for Phase 4 (AI Message Generation with OpenAI)

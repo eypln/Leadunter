@@ -26,6 +26,7 @@ export interface Lead {
   author_id: string;
   location?: string;
   phone?: string;
+  price?: number; // Monthly rent in EUR
   lead_type: LeadType;
   intent_score?: number; // 1-10, only for OWNER leads
   is_agent: boolean; // Only relevant for OWNER leads
