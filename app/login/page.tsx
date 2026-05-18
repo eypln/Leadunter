@@ -50,7 +50,7 @@ export default function LoginPage() {
 
         {/* Features */}
         <div className="text-center space-y-2">
-          <p className="text-gray-400 text-sm">What you'll get:</p>
+          <p className="text-gray-400 text-sm">What you&apos;ll get:</p>
           <div className="flex flex-wrap justify-center gap-4 text-xs text-gray-500">
             <span>✓ Lead Management</span>
             <span>✓ AI-Powered Scoring</span>
