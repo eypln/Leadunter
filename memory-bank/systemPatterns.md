@@ -98,14 +98,16 @@
 4. **AI Evaluation**: Contextual understanding of post language
 
 ### 5. Database Schema Design
-**Decision**: Normalized schema with status tracking
+**Decision**: Supabase PostgreSQL with direct SQL table creation
 **Rationale**: Support workflow states and analytics
 
 **Core Tables**:
 ```sql
-users (id, facebook_id, email, name, created_at)
+users (id, facebook_id, email, name, avatar_url, created_at)
 leads (id, post_url, title, description, author_name, author_id, 
-       location, phone, intent_score, is_agent, status, created_at)
+       location, phone, lead_type, intent_score, is_agent, status, 
+       image_urls, images_downloaded, created_at)
+lead_images (id, lead_id, storage_path, url, created_at)
 messages (id, lead_id, template_type, message_text, sent_at)
 scraping_jobs (id, source, status, leads_found, started_at, completed_at)
 ```
@@ -133,6 +135,7 @@ scraping_jobs (id, source, status, leads_found, started_at, completed_at)
 ### 1. Repository Pattern
 - Abstract database operations behind service layer
 - `LeadRepository`, `UserRepository`, `MessageRepository`, `ImageRepository`
+- Use Supabase client for all database operations
 - Easier to test and swap database providers
 
 ### 2. Factory Pattern

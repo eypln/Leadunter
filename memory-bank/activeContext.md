@@ -40,26 +40,33 @@
 
 ### Phase 1: Database & Authentication
 
-**Step 1: Setup Prisma**
-- Initialize Prisma in the project
-- Choose database provider (Supabase or PostgreSQL)
-- Configure DATABASE_URL in .env
+**Step 1: Setup Supabase Connection**
+- Add Supabase credentials to .env.local
+- Install @supabase/supabase-js package
+- Create Supabase client utility in /lib
+- Test database connection
 
-**Step 2: Define Database Schema**
-Create Prisma schema with tables:
-- `User`: Authentication and user data
-- `Lead`: Scraped listings with leadType (OWNER/CLIENT), imageUrls (JSON), imagesDownloaded (Boolean)
-- `LeadImage`: Downloaded images (created after approval)
-- `Message`: Generated outreach messages (contextual by lead type)
-- `ScrapingJob`: Job tracking and analytics
+**Step 2: Create Database Tables**
+Create tables in Supabase SQL Editor:
+- `users`: Authentication and user data
+- `leads`: Scraped listings with leadType (OWNER/CLIENT), imageUrls (JSON), imagesDownloaded (Boolean)
+- `lead_images`: Downloaded images (created after approval)
+- `messages`: Generated outreach messages (contextual by lead type)
+- `scraping_jobs`: Job tracking and analytics
 
-**Step 3: Configure NextAuth.js**
+**Step 3: Setup Supabase Storage**
+- Create storage bucket for lead images
+- Configure bucket policies
+- Test image upload/download
+
+**Step 4: Configure NextAuth.js**
 - Setup Facebook OAuth provider
 - Create auth API routes
 - Configure session management
-- Create login page
+- Integrate with Supabase users table
 
-**Step 4: Test Authentication**
+**Step 5: Test Authentication**
+- Create login page
 - Test Facebook login flow
 - Verify session management
 - Test protected routes

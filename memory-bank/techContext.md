@@ -21,15 +21,17 @@
   - Session management built-in
 
 ### Database
-- **Primary Option**: Supabase (PostgreSQL)
+- **Provider**: Supabase (PostgreSQL)
   - Hosted PostgreSQL with real-time subscriptions
-  - Built-in auth (though we use NextAuth)
+  - Built-in Storage for images
+  - Built-in Auth (though we use NextAuth for Facebook OAuth)
   - Generous free tier
-- **Alternative**: Self-hosted PostgreSQL
-- **ORM**: Prisma
-  - Type-safe database client
-  - Easy migrations
-  - Great DX with VS Code
+  - REST API and JavaScript client
+- **Client**: @supabase/supabase-js
+  - Official Supabase JavaScript client
+  - Type-safe queries
+  - Real-time subscriptions
+  - Storage management
 
 ### Scraping Engine
 - **Tool**: Playwright
@@ -93,8 +95,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "next-auth": "^5.0.0-beta",
-    "prisma": "^5.0.0",
-    "@prisma/client": "^5.0.0",
+    "@supabase/supabase-js": "^2.39.0",
     "lucide-react": "^0.300.0",
     "tailwindcss": "^3.4.0",
     "zod": "^3.22.0"
@@ -114,7 +115,7 @@
 {
   "dependencies": {
     "playwright": "^1.40.0",
-    "@prisma/client": "^5.0.0",
+    "@supabase/supabase-js": "^2.39.0",
     "openai": "^4.20.0",
     "dotenv": "^16.3.0",
     "node-cron": "^3.0.3"
@@ -131,8 +132,10 @@
 
 ### `.env.example` Structure
 ```bash
-# Database
-DATABASE_URL="postgresql://user:password@localhost:5432/leadhunter"
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL="https://xxx.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJ..."
+SUPABASE_SERVICE_ROLE_KEY="eyJ..."
 
 # NextAuth
 NEXTAUTH_URL="http://localhost:3000"
@@ -150,11 +153,6 @@ OPENAI_API_KEY="sk-..."
 SCRAPER_CRON_SCHEDULE="0 */6 * * *"  # Every 6 hours
 FACEBOOK_EMAIL="scraper-account@example.com"
 FACEBOOK_PASSWORD="secure-password"
-
-# Optional: Supabase (if using)
-NEXT_PUBLIC_SUPABASE_URL="https://xxx.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJ..."
-SUPABASE_SERVICE_ROLE_KEY="eyJ..."
 ```
 
 ## Technical Constraints
@@ -199,19 +197,19 @@ SUPABASE_SERVICE_ROLE_KEY="eyJ..."
 ### Local Development Flow
 1. Clone repository
 2. Copy `.env.example` to `.env.local`
-3. Fill in environment variables
+3. Fill in Supabase credentials and other environment variables
 4. Run `npm install`
-5. Run `npx prisma migrate dev` (setup database)
-6. Run `npm run dev` (start Next.js)
-7. Open `http://localhost:3000`
+5. Run `npm run dev` (start Next.js)
+6. Open `http://localhost:3000`
 
 ### Scraper Development
 1. Navigate to `scraper/` directory
 2. Copy `.env.example` to `.env`
-3. Run `npm install`
-4. Run `npx playwright install` (install browsers)
-5. Run `npm run scrape` (manual test)
-6. Deploy to Railway/VPS for production
+3. Add Supabase credentials
+4. Run `npm install`
+5. Run `npx playwright install` (install browsers)
+6. Run `npm run scrape` (manual test)
+7. Deploy to Railway/VPS for production
 
 ## Future Technical Considerations
 
