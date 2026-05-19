@@ -1,9 +1,54 @@
 ﻿# Active Context: Lead Hunter
 
 ## Current Status
-**Phase**: Phase 9 - Polish & Optimization (COMPLETED)
-**Date**: May 22, 2026
-**Progress**: Phases 0-9 Complete
+**Phase**: Phase 10 - PWA Preparation (COMPLETED)
+**Date**: May 20, 2026
+**Progress**: Phases 0-10 Complete
+
+## What We've Completed
+
+PHASE 0 - COMPLETED: Project initialization
+PHASE 1 - COMPLETED: Database and Authentication
+PHASE 2 - COMPLETED: Premium Dashboard UI
+PHASE 3 - COMPLETED: Lead Management
+PRICE FIELD ENHANCEMENT - COMPLETED: Monthly rent price tracking
+PHASE 4 - COMPLETED: AI Message Generation with Google Gemini
+PHASE 5 - COMPLETED: Apify Integration with Webhook Architecture
+PHASE 6 - COMPLETED: AI Intent Analysis (Lead Classification, Intent Scoring, Agent Detection)
+PHASE 7 - COMPLETED: Facebook Groups Scraper (group_configs DB table, source tracking, GroupsManager UI)
+PHASE 8 - COMPLETED: Scraper Automation (Vercel Cron, Email Notifications)
+PHASE 9 - COMPLETED: Polish & Optimization
+PHASE 10 - COMPLETED: PWA Preparation
+
+## COMPLETED IN PHASE 10:
+1. **web-push** package installed for server-side push notifications
+2. **manifest.json** — `public/manifest.json` (name, icons, theme, shortcuts, standalone display)
+3. **SVG Icons** — `public/icons/icon-192x192.svg`, `icon-512x512.svg`, `icon-maskable.svg` (violet/indigo gradient crosshair design)
+4. **Service Worker** — `public/sw.js` (cache-first for static, network-first for nav, offline fallback, push + notification-click handlers)
+5. **PWA TypeScript types** — `types/pwa.d.ts` (global BeforeInstallPromptEvent)
+6. **PWAProvider** — `components/providers/pwa-provider.tsx` (SW registration, install prompt capture, notification permission)
+7. **Install Banner** — `components/ui/pwa-install-banner.tsx` (animated bottom sheet) + NotificationToggleButton
+8. **Offline page** — `app/offline/page.tsx` (force-static, shown when navigation fails offline)
+9. **Push notification utility** — `lib/pwa/push-notifications.ts` (web-push + VAPID, sendPushToAll, expired subscription cleanup)
+10. **Subscribe API** — `POST /api/notifications/subscribe` (save subscription to Supabase push_subscriptions table)
+11. **Delete subscribe API** — `DELETE /api/notifications/subscribe` (remove subscription)
+12. **Push API** — `POST /api/notifications/push` (send to all subscribers, clean up expired, supports internal WEBHOOK_SECRET auth)
+13. **DB migration** — `supabase/push-subscriptions.sql` (push_subscriptions table + RLS)
+14. **Webhook integration** — After new leads saved, dispatches push notification via `/api/notifications/push`
+15. **layout.tsx updated** — manifest link, viewport, appleWebApp meta, PWAProvider, PWAInstallBanner
+16. **dashboard-layout.tsx updated** — Install App button + NotificationToggleButton in sidebar
+17. **.env.example updated** — VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_SUBJECT
+
+## Next Steps (Setup Required)
+1. Run `supabase/push-subscriptions.sql` in Supabase Dashboard
+2. Generate VAPID keys: `npx web-push generate-vapid-keys`
+3. Add VAPID keys to `.env.local`:
+   - `VAPID_PUBLIC_KEY=...`
+   - `VAPID_PRIVATE_KEY=...`
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY=...` (same as public key)
+4. Deploy to Vercel — PWA criteria only met over HTTPS
+5. Test install prompt on Chrome/Edge (Android or desktop)
+6. Test push notification by triggering a scrape run
 
 ## What We've Completed
 

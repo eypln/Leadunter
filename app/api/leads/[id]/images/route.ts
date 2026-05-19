@@ -5,6 +5,8 @@ import { leadRepository } from '@/lib/repositories/lead-repository';
 import { downloadAndStoreImages } from '@/lib/images/image-downloader';
 import { supabaseAdmin } from '@/lib/supabase/client';
 
+export const dynamic = 'force-dynamic';
+
 // Validate UUID format to prevent injection
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

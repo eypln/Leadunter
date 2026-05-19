@@ -4,6 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 import { geminiService } from '@/lib/ai/gemini-service';
 import { sendScraperJobNotification } from '@/lib/notifications/email-service';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * API Route: Apify Webhook Receiver
  * 
@@ -420,6 +422,30 @@ export async function POST(request: NextRequest) {
     } catch (emailError) {
       console.error('[Webhook] Failed to send email notification:', emailError);
       // Don't fail the webhook if email fails
+    }
+
+    // ===== PHASE 10: SEND PUSH NOTIFICATION =====
+    if (newLeads > 0) {
+      try {
+        const appUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        await fetch(`${appUrl}/api/notifications/push`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.WEBHOOK_SECRET || ''}`,
+          },
+          body: JSON.stringify({
+            title: '🎯 New Leads Found!',
+            body: `${newLeads} new lead${newLeads > 1 ? 's' : ''} (${ownerLeads} owner, ${clientLeads} client)`,
+            tag: 'new-leads',
+            url: '/dashboard',
+          }),
+        });
+        console.log('[Webhook] Push notification dispatched');
+      } catch (pushError) {
+        console.error('[Webhook] Failed to send push notification:', pushError);
+        // Non-blocking — don't fail the webhook
+      }
     }
 
     return NextResponse.json({

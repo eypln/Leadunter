@@ -9,10 +9,13 @@ import {
   MessageSquare, 
   Settings, 
   LogOut,
-  Loader2
+  Loader2,
+  Download,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { usePWA } from '@/components/providers/pwa-provider';
+import { NotificationToggleButton } from '@/components/ui/pwa-install-banner';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -21,6 +24,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const { isInstallable, isInstalled, install } = usePWA();
 
   if (status === 'loading') {
     return (
@@ -81,7 +85,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* User Profile */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
-          <div className="flex items-center gap-3 mb-3">
+          {/* PWA Install Button */}
+          {isInstallable && !isInstalled && (
+            <button
+              onClick={install}
+              className="w-full flex items-center gap-2 px-4 py-2 mb-2 text-sm text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 rounded-lg transition-all"
+            >
+              <Download className="w-4 h-4" />
+              <span>Install App</span>
+            </button>
+          )}
+
+          {/* Notification Toggle */}
+          <NotificationToggleButton />
+
+          <div className="flex items-center gap-3 mb-3 mt-1">
             {session?.user?.image && (
               <Image
                 src={session.user.image}

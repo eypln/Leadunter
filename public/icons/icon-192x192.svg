@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4f46e5;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background with rounded corners -->
+  <rect width="192" height="192" rx="38" fill="url(#bg)" />
+  <!-- Outer target ring -->
+  <circle cx="96" cy="96" r="58" fill="none" stroke="white" stroke-width="7" stroke-opacity="0.9" />
+  <!-- Middle target ring -->
+  <circle cx="96" cy="96" r="36" fill="none" stroke="white" stroke-width="6" stroke-opacity="0.7" />
+  <!-- Center dot -->
+  <circle cx="96" cy="96" r="11" fill="white" />
+  <!-- Top crosshair -->
+  <line x1="96" y1="24" x2="96" y2="48" stroke="white" stroke-width="7" stroke-linecap="round" stroke-opacity="0.9" />
+  <!-- Bottom crosshair -->
+  <line x1="96" y1="144" x2="96" y2="168" stroke="white" stroke-width="7" stroke-linecap="round" stroke-opacity="0.9" />
+  <!-- Left crosshair -->
+  <line x1="24" y1="96" x2="48" y2="96" stroke="white" stroke-width="7" stroke-linecap="round" stroke-opacity="0.9" />
+  <!-- Right crosshair -->
+  <line x1="144" y1="96" x2="168" y2="96" stroke="white" stroke-width="7" stroke-linecap="round" stroke-opacity="0.9" />
+</svg>

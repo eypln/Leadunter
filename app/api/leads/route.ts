@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { leadRepository } from '@/lib/repositories/lead-repository';
 import type { LeadType, LeadStatus } from '@/lib/supabase/types';
 
+export const dynamic = 'force-dynamic';
+
 const VALID_LEAD_TYPES: LeadType[] = ['OWNER', 'CLIENT'];
 const VALID_STATUSES: LeadStatus[] = ['NEW', 'RESPONDED', 'SKIPPED', 'INTERESTED'];
 const MAX_LIMIT = 100;
