@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -39,13 +39,7 @@ export function LeadDetailModal({
   const [message, setMessage] = useState('');
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && leadId) {
-      fetchLeadDetails();
-    }
-  }, [isOpen, leadId]);
-
-  const fetchLeadDetails = async () => {
+  const fetchLeadDetails = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/leads/${leadId}`);
@@ -58,7 +52,13 @@ export function LeadDetailModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [leadId]);
+
+  useEffect(() => {
+    if (isOpen && leadId) {
+      fetchLeadDetails();
+    }
+  }, [isOpen, leadId, fetchLeadDetails]);
 
   const generateMessage = async () => {
     if (!lead) return;
@@ -261,6 +261,7 @@ export function LeadDetailModal({
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {lead.image_urls.map((url, index) => (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               key={index}
                               src={url}

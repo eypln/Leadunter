@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   MapPin,
@@ -11,6 +11,7 @@ import {
   ExternalLink,
   MessageSquare,
   Euro,
+  RefreshCw,
 } from 'lucide-react';
 import { cn, formatDate, formatPhoneNumber, formatPrice } from '@/lib/utils';
 import { LeadDetailModal } from '@/components/lead-detail/lead-detail-modal';
@@ -22,9 +23,28 @@ interface LeadCardProps {
   onUpdate: () => void;
 }
 
-export function LeadCard({ lead, index, onUpdate }: LeadCardProps) {
+export const LeadCard = forwardRef<HTMLDivElement, LeadCardProps>(
+  function LeadCard({ lead, index, onUpdate }, ref) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const isOwner = lead.lead_type === 'OWNER';
+
+  const handleAnalyze = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setAnalyzing(true);
+    try {
+      await fetch(`/api/leads/${lead.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'analyze' }),
+      });
+      onUpdate();
+    } catch (error) {
+      console.error('Failed to analyze lead:', error);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const statusColors = {
     NEW: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
@@ -40,8 +60,8 @@ export function LeadCard({ lead, index, onUpdate }: LeadCardProps) {
   };
 
   return (
-    <>
-      <motion.div
+    <motion.div
+        ref={ref}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9 }}
@@ -115,7 +135,7 @@ export function LeadCard({ lead, index, onUpdate }: LeadCardProps) {
           {/* OWNER Specific: Intent Score & Agent Flag */}
           {isOwner && (
             <div className="flex items-center gap-3 pt-3 border-t border-gray-800">
-              {lead.intent_score && (
+              {lead.intent_score != null ? (
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-gray-500" />
                   <span className="text-sm text-gray-400">Intent:</span>
@@ -127,6 +147,21 @@ export function LeadCard({ lead, index, onUpdate }: LeadCardProps) {
                   >
                     {lead.intent_score}/10
                   </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 text-gray-600">
+                    <TrendingUp className="w-4 h-4" />
+                    <span className="text-sm">Intent: N/A</span>
+                  </div>
+                  <button
+                    onClick={handleAnalyze}
+                    disabled={analyzing}
+                    className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded text-xs transition-all disabled:opacity-50"
+                  >
+                    <RefreshCw className={cn('w-3 h-3', analyzing && 'animate-spin')} />
+                    {analyzing ? 'Analyzing...' : 'Analyze'}
+                  </button>
                 </div>
               )}
               {lead.is_agent && (
@@ -162,16 +197,16 @@ export function LeadCard({ lead, index, onUpdate }: LeadCardProps) {
             </button>
           </div>
         </div>
-      </motion.div>
 
-      {/* Modal */}
-      <LeadDetailModal
-        leadId={lead.id}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onUpdate={onUpdate}
-      />
-    </>
+        {/* Modal */}
+        <LeadDetailModal
+          leadId={lead.id}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onUpdate={onUpdate}
+        />
+      </motion.div>
   );
 }
+);
 

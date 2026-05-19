@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApifyClient } from 'apify-client';
 import { createClient } from '@supabase/supabase-js';
+import { geminiService } from '@/lib/ai/gemini-service';
 
 /**
  * API Route: Apify Webhook Receiver
@@ -55,7 +56,7 @@ function extractPhoneNumber(text: string): string | null {
  * Map Apify dataset item to our Lead structure
  * Data format from apify/facebook-groups-scraper
  */
-function mapApifyItemToLead(item: any) {
+async function mapApifyItemToLead(item: any) {
   // Extract basic info
   const text = item.text || '';
   const authorName = item.user?.name || 'Unknown';
@@ -113,6 +114,53 @@ function mapApifyItemToLead(item: any) {
   // In a real scenario, you'd need to construct this from post ID
   const postUrl = facebookUrl || `https://www.facebook.com/groups/post/${Date.now()}`;
 
+  // ===== PHASE 6: AI CLASSIFICATION & ANALYSIS =====
+  console.log('[AI] Classifying lead type...');
+  let leadType: 'OWNER' | 'CLIENT' = 'OWNER'; // Default
+  let intentScore: number | null = null;
+  let isAgent = false;
+
+  try {
+    // Step 1: Classify lead type (OWNER vs CLIENT)
+    leadType = await geminiService.classifyLeadType({
+      title: title,
+      description: description,
+    });
+    console.log('[AI] Lead classified as:', leadType);
+
+    // Step 2: If OWNER, analyze intent score and detect agents
+    if (leadType === 'OWNER') {
+      console.log('[AI] Analyzing OWNER lead...');
+      
+      // Analyze intent score (1-10)
+      intentScore = await geminiService.analyzeIntentScore({
+        title: title,
+        description: description,
+        author_name: authorName,
+      });
+      console.log('[AI] Intent score:', intentScore);
+
+      // Detect if author is an agent
+      isAgent = await geminiService.detectAgent({
+        title: title,
+        description: description,
+        author_name: authorName,
+      });
+      console.log('[AI] Is agent:', isAgent);
+    } else {
+      console.log('[AI] CLIENT lead - skipping intent/agent analysis');
+    }
+  } catch (error) {
+    console.error('[AI] Error during AI analysis:', error);
+    // Continue with defaults if AI fails
+  }
+
+  // Fallback: ensure OWNER leads always have an intent score
+  if (leadType === 'OWNER' && intentScore === null) {
+    intentScore = 5; // Neutral score when AI analysis fails
+    console.log('[AI] Fallback intent score applied: 5');
+  }
+
   return {
     post_url: postUrl,
     title: title,
@@ -127,11 +175,10 @@ function mapApifyItemToLead(item: any) {
     status: 'NEW',
     created_at: new Date().toISOString(),
     
-    // These will be populated by AI in Phase 6
-    // For now, set defaults
-    lead_type: 'OWNER', // Default to OWNER, will be classified by AI later
-    intent_score: null,
-    is_agent: false,
+    // AI-powered fields (Phase 6)
+    lead_type: leadType,
+    intent_score: intentScore,
+    is_agent: isAgent,
   };
 }
 
@@ -216,11 +263,14 @@ export async function POST(request: NextRequest) {
     let newLeads = 0;
     let duplicates = 0;
     let errors = 0;
+    let ownerLeads = 0;
+    let clientLeads = 0;
+    let agentsFiltered = 0;
 
     for (const item of items) {
       try {
-        // Map to our lead structure
-        const lead = mapApifyItemToLead(item);
+        // Map to our lead structure (with AI classification)
+        const lead = await mapApifyItemToLead(item);
 
         // Skip if no post URL (invalid data)
         if (!lead.post_url) {
@@ -237,9 +287,20 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
+        // Track lead types
+        if (lead.lead_type === 'OWNER') {
+          ownerLeads++;
+          if (lead.is_agent) {
+            agentsFiltered++;
+            console.log('[Webhook] Agent detected, still storing but flagged:', lead.author_name);
+          }
+        } else {
+          clientLeads++;
+        }
+
         // Insert into database
         await insertLead(lead);
-        console.log('[Webhook] Inserted new lead:', lead.title);
+        console.log('[Webhook] Inserted new lead:', lead.title, `(${lead.lead_type})`);
         newLeads++;
 
       } catch (error) {
@@ -265,6 +326,9 @@ export async function POST(request: NextRequest) {
 
     console.log('[Webhook] Processing complete');
     console.log('[Webhook] New leads:', newLeads);
+    console.log('[Webhook] OWNER leads:', ownerLeads);
+    console.log('[Webhook] CLIENT leads:', clientLeads);
+    console.log('[Webhook] Agents detected:', agentsFiltered);
     console.log('[Webhook] Duplicates:', duplicates);
     console.log('[Webhook] Errors:', errors);
 
@@ -274,6 +338,9 @@ export async function POST(request: NextRequest) {
       stats: {
         totalItems: items.length,
         newLeads: newLeads,
+        ownerLeads: ownerLeads,
+        clientLeads: clientLeads,
+        agentsDetected: agentsFiltered,
         duplicates: duplicates,
         errors: errors,
       },

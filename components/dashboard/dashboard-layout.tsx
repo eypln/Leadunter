@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { signOut, useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { 
@@ -82,10 +83,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
           <div className="flex items-center gap-3 mb-3">
             {session?.user?.image && (
-              <img
+              <Image
                 src={session.user.image}
                 alt={session.user.name || 'User'}
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded-full ring-2 ring-blue-500/20"
+                unoptimized
               />
             )}
             <div className="flex-1 min-w-0">

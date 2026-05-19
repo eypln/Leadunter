@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Search, Filter } from 'lucide-react';
 import { LeadCard } from './lead-card';
@@ -16,11 +16,7 @@ export function LeadFeed({ leadType }: LeadFeedProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'ALL'>('ALL');
 
-  useEffect(() => {
-    fetchLeads();
-  }, [leadType]);
-
-  const fetchLeads = async () => {
+  const fetchLeads = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/leads?type=${leadType}`);
@@ -33,7 +29,11 @@ export function LeadFeed({ leadType }: LeadFeedProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [leadType]);
+
+  useEffect(() => {
+    fetchLeads();
+  }, [fetchLeads]);
 
   const filteredLeads = leads.filter((lead) => {
     const matchesSearch =

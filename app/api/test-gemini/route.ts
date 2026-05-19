@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { geminiService } from '@/lib/ai/gemini-service';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     // Check if API key exists
