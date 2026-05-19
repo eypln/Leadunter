@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const filters = {
       leadType: searchParams.get('type') as LeadType | undefined,
       status: searchParams.get('status') as LeadStatus | undefined,
+      scrapeSource: searchParams.get('source') || undefined,
       limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50,
       offset: searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0,
     };

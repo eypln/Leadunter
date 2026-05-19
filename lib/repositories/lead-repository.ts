@@ -8,6 +8,7 @@ export class LeadRepository {
   async getLeads(filters?: {
     leadType?: LeadType;
     status?: LeadStatus;
+    scrapeSource?: string;
     limit?: number;
     offset?: number;
   }) {
@@ -22,6 +23,10 @@ export class LeadRepository {
 
     if (filters?.status) {
       query = query.eq('status', filters.status);
+    }
+
+    if (filters?.scrapeSource) {
+      query = query.eq('scrape_source', filters.scrapeSource);
     }
 
     if (filters?.limit) {

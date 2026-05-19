@@ -53,10 +53,42 @@ function extractPhoneNumber(text: string): string | null {
 }
 
 /**
+ * Detect scrape source from Facebook URL
+ * Returns 'FACEBOOK_MARKETPLACE', 'FACEBOOK_GROUP:GroupName', or 'UNKNOWN'
+ */
+function detectScrapeSource(facebookUrl: string, groupConfigs: Array<{ name: string; url: string }>): string {
+  if (!facebookUrl) return 'UNKNOWN';
+
+  // Check if it's from Facebook Marketplace
+  if (facebookUrl.includes('/marketplace/')) {
+    return 'FACEBOOK_MARKETPLACE';
+  }
+
+  // Check if it's from a known Facebook Group
+  if (facebookUrl.includes('/groups/')) {
+    // Try to match against configured groups
+    for (const group of groupConfigs) {
+      const groupId = group.url.split('/groups/')[1]?.replace(/\/$/, '');
+      if (groupId && facebookUrl.includes(groupId)) {
+        return `FACEBOOK_GROUP:${group.name}`;
+      }
+    }
+    // Generic group - extract group ID from URL
+    const groupMatch = facebookUrl.match(/\/groups\/([^/?#]+)/);
+    if (groupMatch) {
+      return `FACEBOOK_GROUP:${groupMatch[1]}`;
+    }
+    return 'FACEBOOK_GROUP:Unknown';
+  }
+
+  return 'UNKNOWN';
+}
+
+/**
  * Map Apify dataset item to our Lead structure
  * Data format from apify/facebook-groups-scraper
  */
-async function mapApifyItemToLead(item: any) {
+async function mapApifyItemToLead(item: any, groupConfigs: Array<{ name: string; url: string }> = []) {
   // Extract basic info
   const text = item.text || '';
   const authorName = item.user?.name || 'Unknown';
@@ -113,6 +145,9 @@ async function mapApifyItemToLead(item: any) {
   // Generate post URL (we don't have individual post URL, use group URL)
   // In a real scenario, you'd need to construct this from post ID
   const postUrl = facebookUrl || `https://www.facebook.com/groups/post/${Date.now()}`;
+
+  // Phase 7: Detect scrape source
+  const scrapeSource = detectScrapeSource(facebookUrl, groupConfigs);
 
   // ===== PHASE 6: AI CLASSIFICATION & ANALYSIS =====
   console.log('[AI] Classifying lead type...');
@@ -173,6 +208,7 @@ async function mapApifyItemToLead(item: any) {
     image_urls: imageUrls,
     images_downloaded: false,
     status: 'NEW',
+    scrape_source: scrapeSource,
     created_at: new Date().toISOString(),
     
     // AI-powered fields (Phase 6)
@@ -259,6 +295,13 @@ export async function POST(request: NextRequest) {
 
     console.log('[Webhook] Found', items.length, 'items in dataset');
 
+    // Phase 7: Fetch group configs for source detection
+    const { data: groupConfigs } = await supabase
+      .from('group_configs')
+      .select('name, url');
+    const groups = groupConfigs || [];
+    console.log('[Webhook] Loaded', groups.length, 'group configs for source detection');
+
     // Process each item
     let newLeads = 0;
     let duplicates = 0;
@@ -270,7 +313,7 @@ export async function POST(request: NextRequest) {
     for (const item of items) {
       try {
         // Map to our lead structure (with AI classification)
-        const lead = await mapApifyItemToLead(item);
+        const lead = await mapApifyItemToLead(item, groups);
 
         // Skip if no post URL (invalid data)
         if (!lead.post_url) {
@@ -346,7 +389,6 @@ export async function POST(request: NextRequest) {
       },
       runId: runId,
     });
-
   } catch (error) {
     console.error('[Webhook] Error processing webhook:', error);
     

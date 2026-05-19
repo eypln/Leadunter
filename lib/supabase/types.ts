@@ -33,6 +33,16 @@ export interface Lead {
   status: LeadStatus;
   image_urls: string[]; // JSON array of image URLs
   images_downloaded: boolean;
+  scrape_source?: string; // Source: 'FACEBOOK_MARKETPLACE', 'FACEBOOK_GROUP:GroupName', or 'UNKNOWN'
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupConfig {
+  id: string;
+  name: string;
+  url: string;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }

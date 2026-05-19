@@ -1,22 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApifyClient } from 'apify-client';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 /**
  * API Route: Trigger Apify Scraper
  * 
- * This endpoint starts an Apify Actor to scrape Facebook for leads.
+ * This endpoint starts an Apify Actor to scrape Facebook Groups for leads.
  * It uses a webhook architecture to avoid Vercel timeout issues:
- * 1. Start the Apify Actor with webhook configuration
- * 2. Return immediately (no waiting for completion)
- * 3. Apify will call our webhook when done
+ * 1. Fetches active groups from group_configs table
+ * 2. Start the Apify Actor with webhook configuration
+ * 3. Return immediately (no waiting for completion)
+ * 4. Apify will call our webhook when done
  * 
  * Usage:
  * - POST /api/scraper/trigger
- * - Can be called manually or via cron job
+ * - Body: { maxPosts?: number, source?: 'ALL' | 'GROUPS' }
  * 
  * Environment Variables Required:
  * - APIFY_API_TOKEN: Your Apify API token
- * - APIFY_ACTOR_ID: The Apify Actor to run (e.g., "apify/facebook-pages-scraper")
+ * - APIFY_ACTOR_ID: The Apify Actor to run (e.g., "apify/facebook-groups-scraper")
  * - APIFY_WEBHOOK_URL: Your webhook URL (e.g., "https://your-domain.vercel.app/api/webhooks/apify")
  */
 
@@ -56,27 +63,49 @@ export async function POST(request: NextRequest) {
     // Get optional configuration from request body
     const body = await request.json().catch(() => ({}));
     const maxPosts = body.maxPosts || parseInt(process.env.SCRAPER_MAX_POSTS_PER_RUN || '50');
-    const facebookGroups = body.facebookGroups || process.env.FACEBOOK_GROUPS?.split(',') || [];
-    const marketplaceUrl = body.marketplaceUrl || process.env.FACEBOOK_MARKETPLACE_URL;
+
+    // Phase 7: Fetch active groups from database
+    let groupUrls: string[] = [];
+    const { data: activeGroups, error: groupsError } = await supabase
+      .from('group_configs')
+      .select('name, url')
+      .eq('is_active', true)
+      .order('created_at', { ascending: true });
+
+    if (groupsError) {
+      console.warn('[Scraper Trigger] Could not load groups from DB, falling back to env:', groupsError.message);
+      // Fallback to env variable
+      const envGroups = process.env.FACEBOOK_GROUPS?.split(',').filter(Boolean) || [];
+      groupUrls = envGroups.map(u => u.trim());
+    } else if (activeGroups && activeGroups.length > 0) {
+      groupUrls = activeGroups.map(g => g.url);
+      console.log('[Scraper Trigger] Loaded', activeGroups.length, 'active groups from database:');
+      activeGroups.forEach(g => console.log('  -', g.name, ':', g.url));
+    } else {
+      // Fallback to env variable if no groups in DB
+      const envGroups = process.env.FACEBOOK_GROUPS?.split(',').filter(Boolean) || [];
+      groupUrls = envGroups.map(u => u.trim());
+      console.log('[Scraper Trigger] No groups in DB, using env variable:', groupUrls);
+    }
+
+    if (groupUrls.length === 0) {
+      return NextResponse.json(
+        { error: 'No Facebook Groups configured. Add groups via /api/groups or set FACEBOOK_GROUPS env var.' },
+        { status: 400 }
+      );
+    }
 
     // Prepare Actor input for facebook-groups-scraper
     // Documentation: https://apify.com/apify/facebook-groups-scraper
     const actorInput = {
-      // Facebook Groups to scrape
-      startUrls: facebookGroups.map((url: string) => ({ url: url.trim() })),
+      // Facebook Groups to scrape (from DB or env)
+      startUrls: groupUrls.map((url: string) => ({ url: url.trim() })),
       
       // CRITICAL: Limit the number of posts to avoid high costs
-      resultsLimit: maxPosts, // This is the correct field name for this Actor
+      resultsLimit: maxPosts,
       
       // Sort by chronological order (newest first)
       visualOption: "CHRONOLOGICAL",
-    };
-
-    // Run options to limit cost
-    const runOptions = {
-      maxCostUsd: 0.5, // Maximum $0.50 per run
-      timeoutSecs: 18000, // 5 hours timeout
-      memoryMbytes: 4096, // 4 GB memory
     };
 
     console.log('[Scraper Trigger] Starting Apify Actor:', actorId);
@@ -118,6 +147,8 @@ export async function POST(request: NextRequest) {
       runId: run.id,
       status: run.status,
       webhookUrl: webhookUrl,
+      groupsScraped: groupUrls.length,
+      groups: groupUrls,
       note: 'Results will be sent to webhook when scraping completes',
     });
 
@@ -142,10 +173,18 @@ export async function GET() {
   const actorId = process.env.APIFY_ACTOR_ID;
   const webhookUrl = process.env.APIFY_WEBHOOK_URL;
 
+  // Fetch active groups from DB
+  const { data: activeGroups } = await supabase
+    .from('group_configs')
+    .select('name, url, is_active')
+    .eq('is_active', true);
+
   return NextResponse.json({
     configured: !!(apiToken && actorId && webhookUrl),
     actorId: actorId || 'NOT_CONFIGURED',
     webhookUrl: webhookUrl || 'NOT_CONFIGURED',
     hasApiToken: !!apiToken,
+    activeGroups: activeGroups || [],
+    activeGroupCount: activeGroups?.length || 0,
   });
 }

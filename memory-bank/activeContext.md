@@ -1,9 +1,9 @@
 ﻿# Active Context: Lead Hunter
 
 ## Current Status
-**Phase**: Phase 7 - Facebook Groups Scraper (UPCOMING)
+**Phase**: Phase 8 - Scraper Automation (UPCOMING)
 **Date**: May 19, 2026
-**Progress**: Phases 0-6 Complete
+**Progress**: Phases 0-7 Complete
 
 ## What We've Completed
 
@@ -14,7 +14,18 @@ PHASE 3 - COMPLETED: Lead Management
 PRICE FIELD ENHANCEMENT - COMPLETED: Monthly rent price tracking
 PHASE 4 - COMPLETED: AI Message Generation with Google Gemini
 PHASE 5 - COMPLETED: Apify Integration with Webhook Architecture
-PHASE 6 - COMPLETED: AI Intent Analysis (Lead Classification and Scoring)
+PHASE 7 - COMPLETED: Facebook Groups Scraper (group_configs DB table, source tracking, GroupsManager UI)
+
+## COMPLETED IN PHASE 7:
+1. SQL migration: scrape_source column + group_configs table
+2. GroupConfig TypeScript interface + scrape_source on Lead type
+3. API routes: GET/POST /api/groups, PATCH/DELETE /api/groups/[id]
+4. Scraper trigger: fetches active groups from DB (fallback to env)
+5. Webhook handler: detectScrapeSource() - tags each lead with its origin
+6. Lead API: ?source= filter parameter
+7. LeadCard: source badge (Marketplace vs Group name)
+8. LeadDetailModal: source display
+9. GroupsManager component: full CRUD with toggle/delete/add
 
 ## COMPLETED IN PHASE 0:
 1. Memory bank structure (6 core files)

@@ -211,6 +211,19 @@ export function LeadDetailModal({
                           {lead.status}
                         </span>
                       </div>
+                      {/* Phase 7: Source badge */}
+                      {lead.scrape_source && lead.scrape_source !== 'UNKNOWN' && (
+                        <div className="flex items-center gap-1 text-sm col-span-2">
+                          <span className="text-gray-500">Source:</span>
+                          <span className="text-purple-400 font-medium truncate">
+                            {lead.scrape_source.startsWith('FACEBOOK_GROUP:')
+                              ? lead.scrape_source.replace('FACEBOOK_GROUP:', '📍 ')
+                              : lead.scrape_source === 'FACEBOOK_MARKETPLACE'
+                              ? '🛒 Marketplace'
+                              : lead.scrape_source}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* OWNER Specific Info */}

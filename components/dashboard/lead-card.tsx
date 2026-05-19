@@ -12,6 +12,8 @@ import {
   MessageSquare,
   Euro,
   RefreshCw,
+  Users,
+  Store,
 } from 'lucide-react';
 import { cn, formatDate, formatPhoneNumber, formatPrice } from '@/lib/utils';
 import { LeadDetailModal } from '@/components/lead-detail/lead-detail-modal';
@@ -59,7 +61,22 @@ export const LeadCard = forwardRef<HTMLDivElement, LeadCardProps>(
     return 'text-red-400';
   };
 
+  const getSourceInfo = (source?: string) => {
+    if (!source || source === 'UNKNOWN') return null;
+    if (source === 'FACEBOOK_MARKETPLACE') {
+      return { label: 'Marketplace', icon: Store, color: 'text-blue-400 bg-blue-500/10' };
+    }
+    if (source.startsWith('FACEBOOK_GROUP:')) {
+      const groupName = source.replace('FACEBOOK_GROUP:', '');
+      return { label: groupName, icon: Users, color: 'text-purple-400 bg-purple-500/10' };
+    }
+    return null;
+  };
+
+  const sourceInfo = getSourceInfo(lead.scrape_source);
+
   return (
+    <>
     <motion.div
         ref={ref}
         initial={{ opacity: 0, y: 20 }}
@@ -130,6 +147,13 @@ export const LeadCard = forwardRef<HTMLDivElement, LeadCardProps>(
               <Calendar className="w-3 h-3" />
               <span>{formatDate(lead.created_at)}</span>
             </div>
+            {/* Phase 7: Source Badge */}
+            {sourceInfo && (
+              <div className={cn('flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', sourceInfo.color)}>
+                <sourceInfo.icon className="w-3 h-3" />
+                <span className="max-w-[120px] truncate">{sourceInfo.label}</span>
+              </div>
+            )}
           </div>
 
           {/* OWNER Specific: Intent Score & Agent Flag */}
@@ -198,14 +222,14 @@ export const LeadCard = forwardRef<HTMLDivElement, LeadCardProps>(
           </div>
         </div>
 
-        {/* Modal */}
-        <LeadDetailModal
-          leadId={lead.id}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onUpdate={onUpdate}
-        />
       </motion.div>
+      <LeadDetailModal
+        leadId={lead.id}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onUpdate={onUpdate}
+      />
+    </>
   );
 }
 );
