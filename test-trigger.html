@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Apify Trigger</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        button {
+            background: #0070f3;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #0051cc;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Apify Scraper Test</h1>
+    
+    <button onclick="checkConfig()">1. Check Configuration</button>
+    <button onclick="triggerScraper()">2. Trigger Scraper (POST)</button>
+    
+    <div id="result"></div>
+
+    <script>
+        async function checkConfig() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Loading...';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/scraper/trigger');
+                const data = await response.json();
+                resultDiv.innerHTML = '<span class="success">✅ Configuration:</span>\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.innerHTML = '<span class="error">❌ Error:</span>\n' + error.message;
+            }
+        }
+
+        async function triggerScraper() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Triggering scraper... Please wait...';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/scraper/trigger', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = '<span class="success">✅ Scraper Started!</span>\n' + JSON.stringify(data, null, 2);
+                    resultDiv.innerHTML += '\n\n<span class="success">👉 Check Apify Console: https://console.apify.com/actors/runs</span>';
+                    resultDiv.innerHTML += '\n<span class="success">👉 Watch vercel dev terminal for webhook logs</span>';
+                } else {
+                    resultDiv.innerHTML = '<span class="error">❌ Failed:</span>\n' + JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<span class="error">❌ Error:</span>\n' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -11,14 +11,19 @@
                             ↕
 ┌─────────────────────────────────────────────────────────────┐
 │                      DATABASE LAYER                          │
-│         Supabase/PostgreSQL (Prisma ORM)                    │
+│         Supabase/PostgreSQL                                  │
 │  Tables: users, leads, messages, scraping_jobs              │
 └─────────────────────────────────────────────────────────────┘
                             ↕
 ┌─────────────────────────────────────────────────────────────┐
-│                     WORKER LAYER                             │
-│  Playwright Scraper (Railway/VPS) - Cron Job                │
-│  AI Engine (OpenAI/Claude) - Intent Analysis                │
+│                     SCRAPER LAYER                            │
+│  Apify Cloud - Facebook Scraping with Proxies               │
+│  Webhook Architecture - Async Results                       │
+└─────────────────────────────────────────────────────────────┘
+                            ↕
+┌─────────────────────────────────────────────────────────────┐
+│                      AI LAYER                                │
+│  Google Gemini - Intent Analysis, Classification            │
 └─────────────────────────────────────────────────────────────┘
                             ↕
 ┌─────────────────────────────────────────────────────────────┐
@@ -30,17 +35,20 @@
 ## Key Technical Decisions
 
 ### 1. Separation of Concerns: Web App vs Scraper
-**Decision**: Run scraper as separate worker process (Railway/VPS), not in Next.js
+**Decision**: Use Apify cloud platform for scraping, not local Playwright
 **Rationale**: 
 - Vercel serverless functions have 10-60s timeout limits
-- Playwright scraping can take 5-15 minutes per job
-- Separate deployment allows independent scaling
-- Avoids cold starts affecting scraping reliability
+- Facebook scraping can take 5-15 minutes per job
+- Apify handles proxies and anti-detection automatically
+- Webhook architecture avoids timeout issues
+- No need for separate Railway/VPS server
+- No Facebook account ban risks
 
 **Implementation**:
 - Next.js app: UI, auth, lead management
-- Worker service: Scheduled scraping, AI analysis
-- Communication: Database as shared state
+- Apify cloud: Scheduled scraping with proxies
+- Webhook: Async communication (Apify → Next.js)
+- Database: Shared state between systems
 
 ### 2. Semi-Automated Sending (Not Fully Automated)
 **Decision**: Generate message drafts + 1-click send links, contextual by lead type

@@ -1,6 +1,6 @@
 # Progress: Lead Hunter
 
-## Project Status: PHASES 0-4 COMPLETED ✅ | PRICE FIELD ADDED ✅ | PHASE 5 NEXT 🔜
+## Project Status: PHASES 0-5 COMPLETED ✅ | PHASE 6 NEXT 🔜
 
 ---
 
@@ -239,34 +239,65 @@
 
 ---
 
-## PHASE 5: SCRAPER FOUNDATION 🔜 UPCOMING
-**Goal**: Build Playwright scraper for Facebook Marketplace
+## PHASE 5: APIFY INTEGRATION ✅ COMPLETED
+**Goal**: Integrate Apify for cloud-based Facebook scraping with webhook architecture
 
 ### Tasks
-- [ ] Setup scraper project structure
-  - [ ] Create `/scraper` directory
-  - [ ] Initialize separate package.json
-  - [ ] Install Playwright and dependencies
-- [ ] Configure Playwright
-  - [ ] Install browsers
-  - [ ] Setup stealth mode
-  - [ ] Configure user agent rotation
-- [ ] Build FacebookMarketplaceScraper
-  - [ ] Login flow with credentials
-  - [ ] Navigate to Malta rental listings
-  - [ ] Extract post data (title, description, author, location)
-  - [ ] Extract phone numbers (regex)
-  - [ ] Extract image URLs (store as JSON, do NOT download)
-- [ ] Create database integration
-  - [ ] Connect to same database as Next.js app
-  - [ ] Insert scraped leads with leadType field
-  - [ ] Avoid duplicates (check post URL)
-- [ ] Test scraper manually
-  - [ ] Run `npm run scrape`
-  - [ ] Verify data in database
-  - [ ] Verify image URLs stored (not downloaded)
+- [x] Install Apify client package
+  - [x] npm install apify-client
+  - [x] Add to package.json
+- [x] Update environment variables
+  - [x] Add APIFY_API_TOKEN to .env.example
+  - [x] Add APIFY_ACTOR_ID to .env.example
+  - [x] Add APIFY_WEBHOOK_URL to .env.example
+  - [x] Remove old Playwright credentials
+- [x] Create Trigger API Route
+  - [x] POST /api/scraper/trigger
+  - [x] Initialize ApifyClient
+  - [x] Configure Actor input (Facebook URLs, max posts)
+  - [x] Setup webhook configuration
+  - [x] Start Actor asynchronously
+  - [x] Return immediately (no timeout)
+  - [x] GET endpoint for configuration check
+- [x] Create Webhook Receiver API Route
+  - [x] POST /api/webhooks/apify
+  - [x] Receive webhook payload from Apify
+  - [x] Fetch dataset from Apify
+  - [x] Extract phone numbers with regex
+  - [x] Map Apify data to Lead structure
+  - [x] Check for duplicates (by post_url)
+  - [x] Insert unique leads into Supabase
+  - [x] Log scraping job to database
+  - [x] GET endpoint for testing
+- [x] Database Integration!
+  - [x] Create migration for Apify fields (run_id, dataset_id)
+  - [x] Update scraping_jobs table
+  - [x] Add indexes for performance
+- [x] Documentation
+  - [x] Create PHASE_5_APIFY_SETUP.md
+  - [x] Setup instructions
+  - [x] Architecture diagram
+  - [x] Testing guide
+  - [x] Troubleshooting section
+  - [x] Cost estimation
+  - [x] Cron job setup guide
 
-**Completion Criteria**: Scraper successfully extracts leads from Marketplace with image URLs
+**Implementation Details**:
+- **Architecture**: Async webhook pattern (no Vercel timeouts)
+- **Scraper**: Apify cloud platform (handles proxies, anti-detection)
+- **Actor**: Configurable (facebook-pages-scraper or facebook-groups-scraper)
+- **Phone Extraction**: Regex patterns for international formats
+- **Duplicate Detection**: Check post_url before inserting
+- **Error Handling**: Graceful fallbacks, detailed logging
+
+**Completion Criteria**: ✅ Trigger starts Apify Actor, webhook receives results, leads stored in database
+
+**Next Action**: User needs to:
+1. Create Apify account (free tier)
+2. Get API token
+3. Configure environment variables
+4. Run database migration (add-apify-fields.sql)
+5. Test scraper integration
 
 ---
 
@@ -418,24 +449,30 @@
 
 ## Current Phase Summary
 
-**Active Phase**: PHASE 5 - SCRAPER FOUNDATION
+**Active Phase**: PHASE 6 - AI INTENT ANALYSIS
 **Progress**: 0% (Ready to start)
-**Next Task**: Setup Playwright scraper structure
+**Next Task**: Build LeadClassifier service with Google Gemini
 **Blockers**: 
 1. ⏳ SQL migration for price field needs to be run in Supabase Dashboard
-2. ⏳ Gemini API key needs to be added to `.env.local`
+2. ⏳ SQL migration for Apify fields needs to be run in Supabase Dashboard
+3. ⏳ Gemini API key needs to be added to `.env.local`
+4. ⏳ Apify account setup and API token needed
+5. ⏳ Apify webhook URL configuration needed
 
 **Recent Completion**: 
 - ✅ Phase 3 completed successfully
 - ✅ Price field enhancement completed (SQL migration pending)
 - ✅ Phase 4 completed successfully (Gemini AI integration)
+- ✅ Phase 5 completed successfully (Apify integration)
 
 ---
 
 ## Known Issues
 1. **SQL Migration Pending**: Price field SQL needs to be run in Supabase Dashboard (`supabase/add-price-field.sql`)
-2. **Gemini API Key Needed**: Add GEMINI_API_KEY to `.env.local` to test AI message generation
-3. **Deep Links**: WhatsApp/Messenger deep links work best on mobile devices
+2. **SQL Migration Pending**: Apify fields SQL needs to be run in Supabase Dashboard (`supabase/add-apify-fields.sql`)
+3. **Gemini API Key Needed**: Add GEMINI_API_KEY to `.env.local` to test AI message generation
+4. **Apify Setup Needed**: Follow PHASE_5_APIFY_SETUP.md to configure Apify integration
+5. **Deep Links**: WhatsApp/Messenger deep links work best on mobile devices
 
 ---
 

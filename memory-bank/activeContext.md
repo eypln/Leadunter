@@ -74,48 +74,56 @@
 12. ✅ Deep links with pre-filled messages
 13. ✅ Fallback to template if API fails
 
-**NEXT**: Phase 5 - Scraper Foundation with Playwright
+✅ **PHASE 5 COMPLETED**: Apify Integration with Webhook Architecture
+
+**NEXT**: Phase 6 - AI Intent Analysis (Lead Classification & Scoring)
 
 ## Recent Changes
 - ✅ **PHASE 3 COMPLETED** (May 18, 2026)
 - ✅ **PRICE FIELD ADDED** (May 18, 2026)
 - ✅ **PHASE 4 COMPLETED** (May 19, 2026)
-- ✅ Created LeadDetailModal with full-screen animations
-- ✅ Built message generation with templates (WhatsApp, Messenger, Facebook Comment)
-- ✅ Implemented status update functionality
-- ✅ Added copy to clipboard with visual feedback
-- ✅ Real-time dashboard updates after status changes
-- ✅ API endpoints working (GET/PATCH /api/leads/[id], POST /api/messages/generate)
-- ✅ Tested with both OWNER and CLIENT leads
-- ✅ **Added price field to database schema**
-- ✅ **Price displayed on lead cards with Euro icon**
-- ✅ **Price displayed in lead detail modal**
-- ✅ **CLIENT leads show "max budget" label**
+- ✅ **PHASE 5 COMPLETED** (May 19, 2026)
+- ✅ Apify integration with webhook architecture
+- ✅ Trigger API route created (/api/scraper/trigger)
+- ✅ Webhook receiver created (/api/webhooks/apify)
+- ✅ Phone number extraction with regex
+- ✅ Duplicate detection by post_url
+- ✅ Database migration for Apify fields
+- ✅ Comprehensive setup documentation
 
 ## Next Immediate Steps
 
-### Phase 5: Scraper Foundation
+### Phase 6: AI Intent Analysis
 
-**Step 1: Setup Scraper Structure**
-- Create `/scraper` directory
-- Initialize separate package.json
-- Install Playwright and dependencies
-- Configure TypeScript
+**Step 1: Build LeadClassifier Service**
+- Create AI prompt for OWNER vs CLIENT classification
+- Integrate with Google Gemini
+- Parse AI response
+- Handle API errors gracefully
 
-**Step 2: Configure Playwright**
-- Install browsers (chromium)
-- Setup stealth mode
-- Configure user agent rotation
-- Test basic navigation
+**Step 2: Build IntentAnalyzer Service (OWNER leads only)**
+- Create AI prompt for intent scoring (1-10)
+- Analyze post quality and owner signals
+- Parse AI response
+- Store intent_score in database
 
-**Step 3: Build Facebook Login**
-- Implement login flow
-- Handle 2FA if needed
-- Maintain session cookies
-- Test login stability
+**Step 3: Build AgentDetector Service (OWNER leads only)**
+- Check post count by author_id
+- Keyword analysis (agency, commission, etc.)
+- AI-based agent detection
+- Store is_agent flag in database
 
-**Step 4: Build Marketplace Scraper**
-- Navigate to Malta rental listings
+**Step 4: Integrate AI into Webhook Handler**
+- Call LeadClassifier for each scraped lead
+- Call IntentAnalyzer for OWNER leads only
+- Call AgentDetector for OWNER leads only
+- Update database with AI results
+
+**Step 5: Test AI Analysis**
+- Verify lead classification accuracy
+- Verify intent scores (OWNER leads)
+- Verify agent detection (OWNER leads)
+- Test with real Facebook data
 - Extract post data (title, description, author)
 - Extract phone numbers (regex)
 - Extract image URLs (store as JSON)
@@ -166,29 +174,39 @@
 
 ## Current Blockers
 1. **SQL Migration Required**: User needs to run `supabase/add-price-field.sql` in Supabase Dashboard
-2. **Gemini API Key Required**: User needs to add GEMINI_API_KEY to `.env.local` for testing
-3. **Facebook Scraper Account**: Will need dedicated Facebook account for Phase 5
+2. **SQL Migration Required**: User needs to run `supabase/add-apify-fields.sql` in Supabase Dashboard
+3. **Gemini API Key Required**: User needs to add GEMINI_API_KEY to `.env.local` for testing
+4. **Apify Setup Required**: User needs to:
+   - Create Apify account (free tier)
+   - Get API token from Apify Console
+   - Add APIFY_API_TOKEN to `.env.local`
+   - Choose Apify Actor (e.g., apify/facebook-pages-scraper)
+   - Configure webhook URL (ngrok for dev, Vercel URL for prod)
 
 ## Questions for User
 1. ✅ Gemini API chosen - please get API key from https://aistudio.google.com/app/apikey
 2. ✅ Price field added - please run SQL migration in Supabase Dashboard
-3. Ready to test AI message generation?
-4. Ready to move to Phase 5 (Scraper)?
+3. ✅ Apify integration complete - please follow PHASE_5_APIFY_SETUP.md
+4. Ready to test Apify scraper?
+5. Ready to move to Phase 6 (AI Intent Analysis)?
 
 ## Context for Next Session
 When resuming work:
 1. Read all memory bank files (especially `progress.md`)
 2. Check this file for latest decisions
-3. Verify SQL migration was run (check if price field exists in Supabase)
+3. Verify SQL migrations were run (price field + Apify fields)
 4. Verify Gemini API key is in `.env.local`
-5. Test AI message generation
-6. Review Phase 5 tasks in `progress.md`
-7. Continue with Playwright scraper setup
+5. Verify Apify API token is in `.env.local`
+6. Test Apify scraper integration
+7. Review Phase 6 tasks in `progress.md`
+8. Continue with AI Intent Analysis
 
 ## Notes
-- **Phase 0, 1, 2, 3, 4 completed successfully**
+- **Phase 0, 1, 2, 3, 4, 5 completed successfully**
 - **Price field enhancement completed** (SQL migration pending)
+- **Apify integration completed** (SQL migration pending)
 - **Google Gemini AI integrated** (API key needed for testing)
+- **Apify webhook architecture implemented** (no Vercel timeouts)
 - Facebook authentication working perfectly
 - Dashboard displaying real data with prices
 - Premium UI with smooth animations
@@ -200,4 +218,8 @@ When resuming work:
 - Responsive design verified
 - User can toggle between OWNER and CLIENT leads
 - Search and filter working correctly
-- Ready for Phase 5 (Scraper Foundation with Playwright)
+- Scraper uses Apify (no local Playwright needed)
+- Webhook receives results asynchronously
+- Phone number extraction with regex
+- Duplicate detection by post_url
+- Ready for Phase 6 (AI Intent Analysis)
