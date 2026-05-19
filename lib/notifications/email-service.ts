@@ -5,8 +5,13 @@
 
 import { Resend } from 'resend';
 
-// Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) {
+    _resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return _resend;
+}
 
 export interface ScraperJobNotification {
   jobId: string;
@@ -41,7 +46,7 @@ export async function sendScraperJobNotification(
     const html = buildEmailHTML(notification);
 
     // Send email via Resend
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: fromEmail,
       to: adminEmail,
       subject,

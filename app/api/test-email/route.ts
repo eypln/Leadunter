@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import { sendScraperJobNotification } from '@/lib/notifications/email-service';
 
-/**
- * Test endpoint to verify email notifications are working
- */
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     console.log('[Test Email] Sending test notification...');
