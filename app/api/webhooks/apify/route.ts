@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApifyClient } from 'apify-client';
 import { createClient } from '@supabase/supabase-js';
 import { geminiService } from '@/lib/ai/gemini-service';
+import { sendScraperJobNotification } from '@/lib/notifications/email-service';
 
 /**
  * API Route: Apify Webhook Receiver
@@ -265,6 +266,28 @@ export async function POST(request: NextRequest) {
     // Check if run was successful
     if (status !== 'SUCCEEDED') {
       console.error('[Webhook] Scraping run failed:', status);
+      
+      // ===== PHASE 8: SEND FAILURE EMAIL NOTIFICATION =====
+      try {
+        const duration = finishedAt && startedAt
+          ? Math.floor((new Date(finishedAt).getTime() - new Date(startedAt).getTime()) / 1000)
+          : 0;
+
+        await sendScraperJobNotification({
+          jobId: runId || 'unknown',
+          status: 'failure',
+          leadsFound: 0,
+          startedAt: startedAt ? new Date(startedAt) : new Date(),
+          completedAt: finishedAt ? new Date(finishedAt) : new Date(),
+          duration: duration,
+          errorMessage: `Scraping run status: ${status}`,
+          source: 'FACEBOOK_GROUPS',
+        });
+        console.log('[Webhook] Failure email notification sent');
+      } catch (emailError) {
+        console.error('[Webhook] Failed to send failure email:', emailError);
+      }
+
       return NextResponse.json({
         success: false,
         message: 'Scraping run did not succeed',
@@ -374,6 +397,30 @@ export async function POST(request: NextRequest) {
     console.log('[Webhook] Agents detected:', agentsFiltered);
     console.log('[Webhook] Duplicates:', duplicates);
     console.log('[Webhook] Errors:', errors);
+
+    // ===== PHASE 8: SEND EMAIL NOTIFICATION =====
+    try {
+      const duration = Math.floor(
+        (new Date(finishedAt).getTime() - new Date(startedAt).getTime()) / 1000
+      );
+
+      await sendScraperJobNotification({
+        jobId: runId,
+        status: 'success',
+        leadsFound: newLeads,
+        ownerLeads: ownerLeads,
+        clientLeads: clientLeads,
+        agentsDetected: agentsFiltered,
+        startedAt: new Date(startedAt),
+        completedAt: new Date(finishedAt),
+        duration: duration,
+        source: 'FACEBOOK_GROUPS',
+      });
+      console.log('[Webhook] Email notification sent successfully');
+    } catch (emailError) {
+      console.error('[Webhook] Failed to send email notification:', emailError);
+      // Don't fail the webhook if email fails
+    }
 
     return NextResponse.json({
       success: true,
