@@ -4,6 +4,10 @@ import { leadRepository } from '@/lib/repositories/lead-repository';
 import { geminiService } from '@/lib/ai/gemini-service';
 import type { LeadStatus } from '@/lib/supabase/types';
 
+const VALID_STATUSES: LeadStatus[] = ['NEW', 'RESPONDED', 'SKIPPED', 'INTERESTED'];
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -13,6 +17,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  if (!UUID_REGEX.test(params.id)) {
+    return NextResponse.json({ success: false, error: 'Invalid lead ID' }, { status: 400 });
+  }
+
   try {
     const lead = await leadRepository.getLeadById(params.id);
 
@@ -36,10 +44,20 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  try {
-    const body = await request.json();
-    const { status, action } = body;
+  if (!UUID_REGEX.test(params.id)) {
+    return NextResponse.json({ success: false, error: 'Invalid lead ID' }, { status: 400 });
+  }
 
+  let body: { status?: string; action?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
+  }
+
+  const { status, action } = body;
+
+  try {
     // Re-run AI analysis for a lead
     if (action === 'analyze') {
       const lead = await leadRepository.getLeadById(params.id);
@@ -79,6 +97,13 @@ export async function PATCH(
     if (!status) {
       return NextResponse.json(
         { success: false, error: 'Status is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!VALID_STATUSES.includes(status as LeadStatus)) {
+      return NextResponse.json(
+        { success: false, error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` },
         { status: 400 }
       );
     }

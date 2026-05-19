@@ -2,17 +2,34 @@ import { NextRequest, NextResponse } from 'next/server';
 import { leadRepository } from '@/lib/repositories/lead-repository';
 import { geminiService } from '@/lib/ai/gemini-service';
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function POST(request: NextRequest) {
+  let body: { leadId?: string };
   try {
-    const { leadId } = await request.json();
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
+  }
 
-    if (!leadId) {
-      return NextResponse.json(
-        { success: false, error: 'Lead ID is required' },
-        { status: 400 }
-      );
-    }
+  const { leadId } = body;
 
+  if (!leadId) {
+    return NextResponse.json(
+      { success: false, error: 'Lead ID is required' },
+      { status: 400 }
+    );
+  }
+
+  if (!UUID_REGEX.test(leadId)) {
+    return NextResponse.json(
+      { success: false, error: 'Invalid lead ID format' },
+      { status: 400 }
+    );
+  }
+
+  try {
     // Fetch lead details
     const lead = await leadRepository.getLeadById(leadId);
 
@@ -20,7 +37,6 @@ export async function POST(request: NextRequest) {
     let message = '';
 
     if (lead.lead_type === 'OWNER') {
-      // OWNER lead: AI-generated personalized message
       message = await geminiService.generateOwnerMessage({
         title: lead.title,
         description: lead.description,
@@ -30,7 +46,6 @@ export async function POST(request: NextRequest) {
         price: lead.price,
       });
     } else {
-      // CLIENT lead: AI-generated short comment
       message = await geminiService.generateClientMessage({
         title: lead.title,
         description: lead.description,

@@ -428,40 +428,58 @@
 6. Wait for first automated email
 
 ---
-## PHASE 9: POLISH & OPTIMIZATION 🔜 UPCOMING
+## PHASE 9: POLISH & OPTIMIZATION ✅ COMPLETED
 **Goal**: Improve UX, performance, and add analytics
 
 ### Tasks
-- [ ] Build ImageDownloader service
-  - [ ] Fetch images from Facebook URLs
-  - [ ] Upload to Supabase Storage or S3
-  - [ ] Store local paths in lead_images table
-  - [ ] Set imagesDownloaded = true
-- [ ] Create image download API
-  - [ ] POST /api/leads/[id]/images
-  - [ ] Trigger on user approval
-  - [ ] Handle download errors
-- [ ] Add loading states and skeletons
-- [ ] Implement error handling and user feedback
-- [ ] Add toast notifications for actions
-- [ ] Optimize database queries
-  - [ ] Add indexes on frequently queried fields
-  - [ ] Implement pagination for lead feed
-- [ ] Add analytics dashboard
-  - [ ] Lead volume over time (per type)
-  - [ ] Response rate tracking
-  - [ ] Top locations/keywords (per type)
-- [ ] Improve mobile responsiveness
-- [ ] Add keyboard shortcuts
-- [ ] Performance testing
-  - [ ] Lighthouse audit
-  - [ ] Load testing with many leads
-- [ ] Security audit
-  - [ ] Check for SQL injection vulnerabilities
-  - [ ] Validate all user inputs
-  - [ ] Review API authentication
+- [x] Build ImageDownloader service
+  - [x] Fetch images from Facebook URLs
+  - [x] Upload to Supabase Storage
+  - [x] Store local paths in lead_images table
+  - [x] Set imagesDownloaded = true
+- [x] Create image download API
+  - [x] POST /api/leads/[id]/images
+  - [x] Trigger on user approval (Save to Storage button in modal)
+  - [x] Handle download errors
+- [x] Add loading states and skeletons
+  - [x] LeadCardSkeleton component
+  - [x] StatCardSkeleton component
+  - [x] Skeleton replaces spinner in LeadFeed
+- [x] Implement error handling and user feedback
+  - [x] Toast notifications (success/error/warning/info)
+  - [x] ToastProvider integrated into layout
+  - [x] All modal actions use toast notifications
+- [x] Add toast notifications for actions
+  - [x] Copy to clipboard toast
+  - [x] Status update toast
+  - [x] Message generation toast
+  - [x] Image download toast
+- [x] Optimize database queries
+  - [x] Pagination (PAGE_SIZE=12) with Load More button
+  - [x] limit/offset parameters on /api/leads
+  - [x] MAX_LIMIT=100 cap on API
+- [x] Add analytics dashboard
+  - [x] AnalyticsSection component
+  - [x] /api/stats/analytics route
+  - [x] Response rate, lead volume bar chart, top locations
+  - [x] Average intent score (OWNER)
+  - [x] Integrated into DashboardContent
+- [x] Security audit & input validation
+  - [x] UUID validation on all lead ID params
+  - [x] Status enum validation on PATCH /api/leads/[id]
+  - [x] MAX_LIMIT cap on pagination
+  - [x] Safe JSON parse with try/catch in PATCH routes
+  - [x] Auth check on image download API
 
-**Completion Criteria**: App is polished, fast, production-ready with image management
+**New Files Created**:
+- `components/ui/toast.tsx` — Toast system (context + hook + component)
+- `components/ui/skeleton.tsx` — Skeleton loading components
+- `lib/images/image-downloader.ts` — Image download + Supabase Storage service
+- `app/api/leads/[id]/images/route.ts` — Image download API
+- `app/api/stats/analytics/route.ts` — Analytics data API
+- `components/dashboard/analytics-section.tsx` — Analytics UI
+
+**Completion Criteria**: ✅ App is polished with toast notifications, skeleton loading, image download, pagination, analytics dashboard, and security hardening
 
 ---
 

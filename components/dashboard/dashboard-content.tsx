@@ -16,6 +16,7 @@ import { StatsCard } from './stats-card';
 import { LeadTypeToggle } from './lead-type-toggle';
 import { LeadFeed } from './lead-feed';
 import { GroupsManager } from './groups-manager';
+import { AnalyticsSection } from './analytics-section';
 import type { LeadType } from '@/lib/supabase/types';
 
 interface Stats {
@@ -125,6 +126,15 @@ export function DashboardContent() {
           transition={{ delay: 0.2 }}
         >
           <LeadFeed leadType={leadType} />
+        </motion.div>
+
+        {/* Analytics Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <AnalyticsSection leadType={leadType} />
         </motion.div>
 
         {/* Phase 7: Facebook Groups Manager */}

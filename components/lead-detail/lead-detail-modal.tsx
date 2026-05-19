@@ -18,6 +18,7 @@ import {
   Euro,
 } from 'lucide-react';
 import { cn, formatDate, formatPhoneNumber, formatPrice } from '@/lib/utils';
+import { useToast } from '@/components/ui/toast';
 import type { Lead } from '@/lib/supabase/types';
 
 interface LeadDetailModalProps {
@@ -36,8 +37,10 @@ export function LeadDetailModal({
   const [lead, setLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
   const [generatingMessage, setGeneratingMessage] = useState(false);
+  const [downloadingImages, setDownloadingImages] = useState(false);
   const [message, setMessage] = useState('');
   const [copied, setCopied] = useState(false);
+  const { success: toastSuccess, error: toastError, info: toastInfo } = useToast();
 
   const fetchLeadDetails = useCallback(async () => {
     setLoading(true);
@@ -73,9 +76,12 @@ export function LeadDetailModal({
       const data = await res.json();
       if (data.success) {
         setMessage(data.message);
+        toastSuccess('Message generated', 'AI message is ready to send.');
+      } else {
+        toastError('Failed to generate message', data.error);
       }
-    } catch (error) {
-      console.error('Failed to generate message:', error);
+    } catch {
+      toastError('Failed to generate message', 'Please try again.');
     } finally {
       setGeneratingMessage(false);
     }
@@ -91,17 +97,45 @@ export function LeadDetailModal({
         body: JSON.stringify({ status }),
       });
       if (res.ok) {
+        toastSuccess('Status updated', `Lead marked as ${status.toLowerCase()}.`);
         onUpdate();
         onClose();
+      } else {
+        toastError('Failed to update status');
       }
-    } catch (error) {
-      console.error('Failed to update status:', error);
+    } catch {
+      toastError('Failed to update status', 'Please try again.');
+    }
+  };
+
+  const downloadImages = async () => {
+    if (!lead) return;
+    if (lead.images_downloaded) {
+      toastInfo('Already downloaded', 'Images are already saved.');
+      return;
+    }
+    setDownloadingImages(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/images`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        toastSuccess('Images downloaded', data.message);
+        setLead((prev) => prev ? { ...prev, images_downloaded: true } : prev);
+        onUpdate();
+      } else {
+        toastError('Download failed', data.error);
+      }
+    } catch {
+      toastError('Download failed', 'Please try again.');
+    } finally {
+      setDownloadingImages(false);
     }
   };
 
   const copyMessage = () => {
     navigator.clipboard.writeText(message);
     setCopied(true);
+    toastSuccess('Copied!', 'Message copied to clipboard.');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -269,9 +303,36 @@ export function LeadDetailModal({
                     {/* Images */}
                     {lead.image_urls && lead.image_urls.length > 0 && (
                       <div>
-                        <h3 className="text-lg font-semibold text-white mb-3">
-                          Images
-                        </h3>
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-lg font-semibold text-white">
+                            Images ({lead.image_urls.length})
+                          </h3>
+                          {!lead.images_downloaded && (
+                            <button
+                              onClick={downloadImages}
+                              disabled={downloadingImages}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 hover:text-indigo-300 rounded-lg transition-all text-sm font-medium disabled:opacity-50"
+                            >
+                              {downloadingImages ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  Downloading...
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-3.5 h-3.5" />
+                                  Save to Storage
+                                </>
+                              )}
+                            </button>
+                          )}
+                          {lead.images_downloaded && (
+                            <span className="flex items-center gap-1.5 text-xs text-green-400">
+                              <Check className="w-3.5 h-3.5" />
+                              Saved
+                            </span>
+                          )}
+                        </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {lead.image_urls.map((url, index) => (
                             // eslint-disable-next-line @next/next/no-img-element
