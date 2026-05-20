@@ -1,12 +1,12 @@
 import { NextAuthOptions } from 'next-auth';
-import FacebookProvider from 'next-auth/providers/facebook';
+import GoogleProvider from 'next-auth/providers/google';
 import { supabaseAdmin } from '@/lib/supabase/client';
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    FacebookProvider({
-      clientId: process.env.FACEBOOK_CLIENT_ID!,
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
   ],
   
@@ -30,7 +30,7 @@ export const authOptions: NextAuthOptions = {
             facebook_id: account?.providerAccountId || user.id,
             email: user.email,
             name: user.name || 'Unknown',
-            avatar_url: user.image,
+            avatar_url: user.image || null,
           });
         } else {
           // Update existing user
@@ -62,7 +62,6 @@ export const authOptions: NextAuthOptions = {
 
           if (user) {
             session.user.id = user.id;
-            session.user.facebookId = user.facebook_id;
           }
         } catch (error) {
           console.error('Error in session callback:', error);

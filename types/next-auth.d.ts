@@ -4,7 +4,6 @@ declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
-      facebookId: string;
       name?: string | null;
       email?: string | null;
       image?: string | null;
@@ -13,7 +12,6 @@ declare module 'next-auth' {
 
   interface User {
     id: string;
-    facebookId?: string;
   }
 }
 
