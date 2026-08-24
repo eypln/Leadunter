@@ -54,22 +54,27 @@ function detectScrapeSource(
   return 'UNKNOWN';
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function processItem(item: any, groups: Array<{ name: string; url: string }>) {
-  const text = item.text || '';
-  const authorName = item.user?.name || 'Unknown';
-  const authorId = item.user?.id || null;
-  const facebookUrl = item.facebookUrl || item.postUrl || '';
+type ApifyItem = Record<string, unknown>;
+type GroupConfig = { name: string; url: string };
+
+async function processItem(item: ApifyItem, groups: GroupConfig[]) {
+  const text = (item.text as string) || '';
+  const user = item.user as Record<string, unknown> | undefined;
+  const authorName = (user?.name as string) || 'Unknown';
+  const authorId = (user?.id as string) || null;
+  const facebookUrl = (item.facebookUrl as string) || (item.postUrl as string) || '';
 
   const title = text.substring(0, 200) || 'No title';
   let price: number | null = null;
   let location: string | null = null;
   let description = text;
 
-  if (item.attachments?.length > 0) {
-    const first = item.attachments[0];
-    if (Array.isArray(first.properties)) {
-      for (const prop of first.properties) {
+  const attachments = (item.attachments as ApifyItem[]) || [];
+  if (attachments.length > 0) {
+    const first = attachments[0];
+    const properties = first.properties as Array<{ key: string; value?: { text?: string } }> | undefined;
+    if (Array.isArray(properties)) {
+      for (const prop of properties) {
         if (prop.key === 'price_amount' && prop.value?.text) {
           const amt = parseInt(prop.value.text);
           if (!isNaN(amt)) price = Math.round(amt / 100);
@@ -81,9 +86,11 @@ async function processItem(item: any, groups: Array<{ name: string; url: string 
   }
 
   const imageUrls: string[] = [];
-  for (const att of item.attachments ?? []) {
-    if (att.thumbnail) imageUrls.push(att.thumbnail);
-    else if (att.image?.uri) imageUrls.push(att.image.uri);
+  for (const att of attachments) {
+    if (att.thumbnail) imageUrls.push(att.thumbnail as string);
+    else if ((att.image as Record<string, unknown>)?.uri) {
+      imageUrls.push(((att.image as Record<string, unknown>).uri) as string);
+    }
   }
 
   const phone = extractPhoneNumber(description || text);
@@ -160,7 +167,7 @@ export async function GET(request: NextRequest) {
     const newItems: string[] = [];
     const dupItems: string[] = [];
     for (const item of items) {
-      const url = item.facebookUrl || item.postUrl || '';
+      const url = ((item.facebookUrl as string) || (item.postUrl as string) || '');
       if (url && await leadExists(url)) dupItems.push(url);
       else newItems.push(url || '(no url)');
     }
@@ -174,8 +181,8 @@ export async function GET(request: NextRequest) {
       wouldSkip: dupItems.length,
       preview: items.slice(0, 3).map(i => ({
         text: (i.text as string)?.substring(0, 100),
-        url: i.facebookUrl || i.postUrl,
-        user: (i.user as Record<string,unknown>)?.name,
+        url: (i.facebookUrl as string) || (i.postUrl as string),
+        user: (i.user as Record<string, unknown>)?.name,
       })),
       instruction: 'POST to /api/admin/recover-run with { runId } to import these leads',
     });
@@ -222,7 +229,7 @@ export async function POST(request: NextRequest) {
 
     for (const item of items) {
       try {
-        const lead = await processItem(item, groups);
+        const lead = await processItem(item as ApifyItem, groups as GroupConfig[]);
 
         const exists = await leadExists(lead.post_url);
         if (exists) {
