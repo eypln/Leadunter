@@ -103,35 +103,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Facebook session cookie for private/closed group access
-    // Format: "c_user=111; xs=abc; datr=xyz; fr=pqr"
-    // Get this from your browser while logged in to Facebook (see dashboard instructions)
+    // The official apify/facebook-groups-scraper does NOT support cookies.
+    // Kept here only for informational logging.
     const cookieString = process.env.FACEBOOK_COOKIE_STRING?.trim() || undefined;
     if (cookieString) {
-      console.log('[Scraper Trigger] Facebook cookie configured — private groups will be accessible');
+      console.log('[Scraper Trigger] Note: FACEBOOK_COOKIE_STRING is set but apify/facebook-groups-scraper does not support cookies. Only public groups will work.');
     } else {
-      console.warn('[Scraper Trigger] No FACEBOOK_COOKIE_STRING set — only public groups will work');
+      console.log('[Scraper Trigger] No cookie — only public groups will be scraped (expected behaviour)');
     }
 
-    // Prepare Actor input for facebook-groups-scraper
-    // Documentation: https://apify.com/simpleapi/facebook-groups-scraper
+    // Prepare Actor input for apify/facebook-groups-scraper
+    // Docs: https://apify.com/apify/facebook-groups-scraper
+    // NOTE: This actor only works with PUBLIC groups. Private groups require login cookies.
     const actorInput: Record<string, unknown> = {
       // Facebook Groups to scrape (from DB or env)
       startUrls: groupUrls.map((url: string) => ({ url: url.trim() })),
 
-      // CRITICAL: Limit the number of posts to avoid high costs
+      // Maximum posts per run — keep low to control costs
       resultsLimit: maxPosts,
 
-      // Sort by chronological order (newest first)
-      viewOption: "CHRONOLOGICAL",
-
-      // Only fetch posts from the last 7 days to avoid stale leads
-      onlyPostsNewerThan: process.env.SCRAPER_POSTS_NEWER_THAN || "7 days",
+      // Sort newest posts first
+      visualOption: 'CHRONOLOGICAL',
     };
-
-    // Attach session cookie if available — required for private/closed groups
-    if (cookieString) {
-      actorInput.cookieString = cookieString;
-    }
 
     console.log('[Scraper Trigger] Starting Apify Actor:', actorId);
     console.log('[Scraper Trigger] Input:', JSON.stringify(actorInput, null, 2));
