@@ -129,20 +129,19 @@ export async function POST(request: NextRequest) {
     console.log('[Scraper Trigger] Starting Apify Actor:', actorId);
     console.log('[Scraper Trigger] Input:', JSON.stringify(actorInput, null, 2));
 
-    // Start the Actor with webhook configuration
-    // Note: Cost limiting is done via Apify Console settings, not API
-    const run = await client.actor(actorId).call(actorInput, {
+    // Start the Actor ASYNCHRONOUSLY — do NOT use .call() which waits for completion
+    // and will hit Vercel's 10s timeout. .start() fires and returns the run immediately.
+    const run = await client.actor(actorId).start(actorInput, {
       // Memory allocation (lower = cheaper)
-      memory: 4096, // 4 GB
-      
-      // Timeout (prevents infinite runs)
-      timeout: 18000, // 5 hours in seconds
-      
-      // Webhook configuration - Apify will POST to this URL when done
+      memory: 4096,
+
+      // Max run time safety cap (seconds) — Apify enforces this server-side
+      timeout: 300,
+
+      // Webhook — Apify POSTs here when the run finishes
       webhooks: [
         {
           eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED'],
-          // Append secret as query param so Apify can pass it without custom headers
           requestUrl: `${webhookUrl}?secret=${encodeURIComponent(process.env.WEBHOOK_SECRET || '')}`,
           payloadTemplate: JSON.stringify({
             runId: '{{resource.id}}',
