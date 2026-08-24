@@ -3,6 +3,7 @@ import { ApifyClient } from 'apify-client';
 import { createClient } from '@supabase/supabase-js';
 import { geminiService } from '@/lib/ai/gemini-service';
 import { sendScraperJobNotification } from '@/lib/notifications/email-service';
+import { validateWebhookSecret } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -256,12 +257,29 @@ async function insertLead(lead: any) {
  * POST handler - receives webhook from Apify
  */
 export async function POST(request: NextRequest) {
+  // Validate webhook secret only when WEBHOOK_SECRET is configured in env.
+  // If the env var is missing (e.g. first deploy before it's set in Vercel),
+  // we let the request through with a warning so leads are never lost.
+  const webhookSecret = process.env.WEBHOOK_SECRET;
+  if (webhookSecret) {
+    if (!validateWebhookSecret(request)) {
+      console.warn('[Webhook] Unauthorized request — invalid or missing webhook secret');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    console.log('[Webhook] Secret validated ✓');
+  } else {
+    console.warn('[Webhook] WEBHOOK_SECRET not set — skipping auth (configure in Vercel env vars)');
+  }
+
   try {
     // Parse webhook payload
     const payload = await request.json();
     
-    console.log('[Webhook] Received Apify webhook');
-    console.log('[Webhook] Payload:', JSON.stringify(payload, null, 2));
+    console.log('[Webhook] ===== APIFY WEBHOOK RECEIVED =====');
+    console.log('[Webhook] Run ID:', payload?.runId);
+    console.log('[Webhook] Status:', payload?.status);
+    console.log('[Webhook] Dataset ID:', payload?.defaultDatasetId);
+    console.log('[Webhook] Full payload:', JSON.stringify(payload, null, 2));
 
     const { runId, status, defaultDatasetId, startedAt, finishedAt } = payload;
 
@@ -298,7 +316,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!defaultDatasetId) {
-      console.error('[Webhook] No dataset ID provided');
+      console.error('[Webhook] No dataset ID in payload — cannot fetch results');
       return NextResponse.json({
         success: false,
         message: 'No dataset ID in webhook payload',
@@ -318,14 +336,15 @@ export async function POST(request: NextRequest) {
     const dataset = await client.dataset(defaultDatasetId);
     const { items } = await dataset.listItems();
 
-    console.log('[Webhook] Found', items.length, 'items in dataset');
+    console.log(`[Webhook] Dataset fetched — ${items.length} items found`);
 
     // Phase 7: Fetch group configs for source detection
-    const { data: groupConfigs } = await supabase
+    const { data: groupConfigs, error: groupsErr } = await supabase
       .from('group_configs')
       .select('name, url');
+    if (groupsErr) console.warn('[Webhook] Could not load group_configs:', groupsErr.message);
     const groups = groupConfigs || [];
-    console.log('[Webhook] Loaded', groups.length, 'group configs for source detection');
+    console.log(`[Webhook] Loaded ${groups.length} group configs for source detection`);
 
     // Process each item
     let newLeads = 0;
@@ -342,7 +361,7 @@ export async function POST(request: NextRequest) {
 
         // Skip if no post URL (invalid data)
         if (!lead.post_url) {
-          console.warn('[Webhook] Skipping item without post URL');
+          console.warn('[Webhook] Skipping item — no post URL');
           errors++;
           continue;
         }
@@ -350,7 +369,7 @@ export async function POST(request: NextRequest) {
         // Check for duplicates
         const exists = await leadExists(lead.post_url);
         if (exists) {
-          console.log('[Webhook] Duplicate lead:', lead.post_url);
+          console.log('[Webhook] Duplicate, skipping:', lead.post_url);
           duplicates++;
           continue;
         }
@@ -360,7 +379,7 @@ export async function POST(request: NextRequest) {
           ownerLeads++;
           if (lead.is_agent) {
             agentsFiltered++;
-            console.log('[Webhook] Agent detected, still storing but flagged:', lead.author_name);
+            console.log('[Webhook] Agent detected (stored + flagged):', lead.author_name);
           }
         } else {
           clientLeads++;
@@ -368,11 +387,11 @@ export async function POST(request: NextRequest) {
 
         // Insert into database
         await insertLead(lead);
-        console.log('[Webhook] Inserted new lead:', lead.title, `(${lead.lead_type})`);
+        console.log(`[Webhook] ✅ Inserted: "${lead.title?.substring(0, 60)}" (${lead.lead_type}, score:${lead.intent_score})`);
         newLeads++;
 
       } catch (error) {
-        console.error('[Webhook] Error processing item:', error);
+        console.error('[Webhook] ❌ Error processing item:', error);
         errors++;
       }
     }
@@ -392,13 +411,14 @@ export async function POST(request: NextRequest) {
       console.error('[Webhook] Error logging scraping job:', error);
     }
 
-    console.log('[Webhook] Processing complete');
-    console.log('[Webhook] New leads:', newLeads);
-    console.log('[Webhook] OWNER leads:', ownerLeads);
-    console.log('[Webhook] CLIENT leads:', clientLeads);
-    console.log('[Webhook] Agents detected:', agentsFiltered);
-    console.log('[Webhook] Duplicates:', duplicates);
-    console.log('[Webhook] Errors:', errors);
+    console.log('[Webhook] ===== PROCESSING COMPLETE =====');
+    console.log(`[Webhook] Total items   : ${items.length}`);
+    console.log(`[Webhook] New leads     : ${newLeads}`);
+    console.log(`[Webhook] OWNER leads   : ${ownerLeads}`);
+    console.log(`[Webhook] CLIENT leads  : ${clientLeads}`);
+    console.log(`[Webhook] Agents flagged: ${agentsFiltered}`);
+    console.log(`[Webhook] Duplicates    : ${duplicates}`);
+    console.log(`[Webhook] Errors        : ${errors}`);
 
     // ===== PHASE 8: SEND EMAIL NOTIFICATION =====
     try {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { leadRepository } from '@/lib/repositories/lead-repository';
 import { geminiService } from '@/lib/ai/gemini-service';
+import { requireAuth, unauthorizedResponse } from '@/lib/api-auth';
 import type { LeadStatus } from '@/lib/supabase/types';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await requireAuth();
+  if (!session) return unauthorizedResponse();
+
   if (!UUID_REGEX.test(params.id)) {
     return NextResponse.json({ success: false, error: 'Invalid lead ID' }, { status: 400 });
   }
@@ -46,6 +50,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await requireAuth();
+  if (!session) return unauthorizedResponse();
+
   if (!UUID_REGEX.test(params.id)) {
     return NextResponse.json({ success: false, error: 'Invalid lead ID' }, { status: 400 });
   }

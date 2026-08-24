@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth, unauthorizedResponse } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await requireAuth();
+  if (!session) return unauthorizedResponse();
   try {
     const body = await request.json();
     const allowedFields = ['name', 'is_active'];
@@ -65,6 +68,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await requireAuth();
+  if (!session) return unauthorizedResponse();
   try {
     const { error } = await supabase
       .from('group_configs')

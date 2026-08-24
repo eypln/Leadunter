@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/client';
+import { requireAuth, unauthorizedResponse } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  const session = await requireAuth();
+  if (!session) return unauthorizedResponse();
   try {
     const searchParams = request.nextUrl.searchParams;
     const leadType = searchParams.get('type'); // OWNER | CLIENT | null (all)

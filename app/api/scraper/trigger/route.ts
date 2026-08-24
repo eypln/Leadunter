@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApifyClient } from 'apify-client';
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth, unauthorizedResponse } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,10 @@ const supabase = createClient(
  */
 
 export async function POST(request: NextRequest) {
+  // Only authenticated users can manually trigger a scrape
+  const session = await requireAuth();
+  if (!session) return unauthorizedResponse();
+
   try {
     // Validate environment variables
     const apiToken = process.env.APIFY_API_TOKEN;
@@ -97,18 +102,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Facebook session cookie for private/closed group access
+    // Format: "c_user=111; xs=abc; datr=xyz; fr=pqr"
+    // Get this from your browser while logged in to Facebook (see dashboard instructions)
+    const cookieString = process.env.FACEBOOK_COOKIE_STRING?.trim() || undefined;
+    if (cookieString) {
+      console.log('[Scraper Trigger] Facebook cookie configured — private groups will be accessible');
+    } else {
+      console.warn('[Scraper Trigger] No FACEBOOK_COOKIE_STRING set — only public groups will work');
+    }
+
     // Prepare Actor input for facebook-groups-scraper
-    // Documentation: https://apify.com/apify/facebook-groups-scraper
-    const actorInput = {
+    // Documentation: https://apify.com/simpleapi/facebook-groups-scraper
+    const actorInput: Record<string, unknown> = {
       // Facebook Groups to scrape (from DB or env)
       startUrls: groupUrls.map((url: string) => ({ url: url.trim() })),
-      
+
       // CRITICAL: Limit the number of posts to avoid high costs
       resultsLimit: maxPosts,
-      
+
       // Sort by chronological order (newest first)
-      visualOption: "CHRONOLOGICAL",
+      viewOption: "CHRONOLOGICAL",
+
+      // Only fetch posts from the last 7 days to avoid stale leads
+      onlyPostsNewerThan: process.env.SCRAPER_POSTS_NEWER_THAN || "7 days",
     };
+
+    // Attach session cookie if available — required for private/closed groups
+    if (cookieString) {
+      actorInput.cookieString = cookieString;
+    }
 
     console.log('[Scraper Trigger] Starting Apify Actor:', actorId);
     console.log('[Scraper Trigger] Input:', JSON.stringify(actorInput, null, 2));
@@ -126,7 +149,8 @@ export async function POST(request: NextRequest) {
       webhooks: [
         {
           eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED'],
-          requestUrl: webhookUrl,
+          // Append secret as query param so Apify can pass it without custom headers
+          requestUrl: `${webhookUrl}?secret=${encodeURIComponent(process.env.WEBHOOK_SECRET || '')}`,
           payloadTemplate: JSON.stringify({
             runId: '{{resource.id}}',
             status: '{{resource.status}}',
@@ -151,6 +175,7 @@ export async function POST(request: NextRequest) {
       webhookUrl: webhookUrl,
       groupsScraped: groupUrls.length,
       groups: groupUrls,
+      cookieConfigured: !!cookieString,
       note: 'Results will be sent to webhook when scraping completes',
     });
 
@@ -168,9 +193,11 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET endpoint for testing/status check
+ * GET endpoint for status check (auth required)
  */
 export async function GET() {
+  const session = await requireAuth();
+  if (!session) return unauthorizedResponse();
   const apiToken = process.env.APIFY_API_TOKEN;
   const actorId = process.env.APIFY_ACTOR_ID;
   const webhookUrl = process.env.APIFY_WEBHOOK_URL;
@@ -186,6 +213,7 @@ export async function GET() {
     actorId: actorId || 'NOT_CONFIGURED',
     webhookUrl: webhookUrl || 'NOT_CONFIGURED',
     hasApiToken: !!apiToken,
+    cookieConfigured: !!process.env.FACEBOOK_COOKIE_STRING,
     activeGroups: activeGroups || [],
     activeGroupCount: activeGroups?.length || 0,
   });

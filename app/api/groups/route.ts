@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth, unauthorizedResponse } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,8 @@ const supabase = createClient(
  * List all Facebook group configurations
  */
 export async function GET() {
+  const session = await requireAuth();
+  if (!session) return unauthorizedResponse();
   try {
     const { data, error } = await supabase
       .from('group_configs')
@@ -37,6 +40,8 @@ export async function GET() {
  * Add a new Facebook group to monitor
  */
 export async function POST(request: NextRequest) {
+  const session = await requireAuth();
+  if (!session) return unauthorizedResponse();
   try {
     const body = await request.json();
     const { name, url } = body;
