@@ -6,6 +6,9 @@ import { sendScraperJobNotification } from '@/lib/notifications/email-service';
 import { validateWebhookSecret } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
+// Processing many items sequentially through Gemini AI can take a while;
+// extend the Vercel function timeout (default 300s on Pro, capped by plan).
+export const maxDuration = 300;
 
 /**
  * API Route: Apify Webhook Receiver
@@ -356,6 +359,17 @@ export async function POST(request: NextRequest) {
 
     for (const item of items) {
       try {
+        // Cheap duplicate check BEFORE running AI classification — avoids
+        // wasting Gemini calls (and Vercel function time) on posts we
+        // already have, which was causing the whole webhook to time out
+        // and never persist anything when a run returned many items.
+        const rawPostUrl = item.facebookUrl || '';
+        if (rawPostUrl && (await leadExists(rawPostUrl))) {
+          console.log('[Webhook] Duplicate (pre-AI), skipping:', rawPostUrl);
+          duplicates++;
+          continue;
+        }
+
         // Map to our lead structure (with AI classification)
         const lead = await mapApifyItemToLead(item, groups);
 
@@ -366,7 +380,8 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Check for duplicates
+        // Safety-net duplicate check (covers items without a facebookUrl,
+        // e.g. two items in the same batch resolving to the same post_url)
         const exists = await leadExists(lead.post_url);
         if (exists) {
           console.log('[Webhook] Duplicate, skipping:', lead.post_url);
