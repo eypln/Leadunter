@@ -363,7 +363,7 @@ export async function POST(request: NextRequest) {
         // wasting Gemini calls (and Vercel function time) on posts we
         // already have, which was causing the whole webhook to time out
         // and never persist anything when a run returned many items.
-        const rawPostUrl = item.facebookUrl || '';
+        const rawPostUrl = (item.facebookUrl as string | undefined) || '';
         if (rawPostUrl && (await leadExists(rawPostUrl))) {
           console.log('[Webhook] Duplicate (pre-AI), skipping:', rawPostUrl);
           duplicates++;
