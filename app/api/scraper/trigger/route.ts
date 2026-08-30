@@ -138,18 +138,16 @@ export async function POST(request: NextRequest) {
       // Max run time safety cap (seconds) — Apify enforces this server-side
       timeout: 300,
 
-      // Webhook — Apify POSTs here when the run finishes
+      // Webhook — Apify POSTs here when the run finishes.
+      // NOTE: we intentionally do NOT set a custom payloadTemplate here.
+      // Apify's ad-hoc run webhooks were observed to NOT interpolate
+      // dot-path placeholders like {{resource.status}} (sent back literally),
+      // which made every dispatch look like a failed run. The default
+      // payload (eventType + eventData + full resource object) is reliable.
       webhooks: [
         {
           eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED'],
           requestUrl: `${webhookUrl}?secret=${encodeURIComponent(process.env.WEBHOOK_SECRET || '')}`,
-          payloadTemplate: JSON.stringify({
-            runId: '{{resource.id}}',
-            status: '{{resource.status}}',
-            defaultDatasetId: '{{resource.defaultDatasetId}}',
-            startedAt: '{{resource.startedAt}}',
-            finishedAt: '{{resource.finishedAt}}',
-          }),
         },
       ],
     });

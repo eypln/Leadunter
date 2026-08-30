@@ -282,14 +282,24 @@ export async function POST(request: NextRequest) {
   try {
     // Parse webhook payload
     const payload = await request.json();
-    
+
     console.log('[Webhook] ===== APIFY WEBHOOK RECEIVED =====');
-    console.log('[Webhook] Run ID:', payload?.runId);
-    console.log('[Webhook] Status:', payload?.status);
-    console.log('[Webhook] Dataset ID:', payload?.defaultDatasetId);
     console.log('[Webhook] Full payload:', JSON.stringify(payload, null, 2));
 
-    const { runId, status, defaultDatasetId, startedAt, finishedAt } = payload;
+    // Apify's default webhook payload shape is:
+    // { userId, createdAt, eventType, eventData: { actorId, actorRunId }, resource: {...full run...} }
+    // We also support a legacy flat shape (runId/status/defaultDatasetId at the
+    // top level) for backwards compatibility with older payloadTemplate configs.
+    const resource = payload?.resource;
+    const runId = resource?.id || payload?.eventData?.actorRunId || payload?.runId;
+    const status = resource?.status || payload?.status;
+    const defaultDatasetId = resource?.defaultDatasetId || payload?.defaultDatasetId;
+    const startedAt = resource?.startedAt || payload?.startedAt;
+    const finishedAt = resource?.finishedAt || payload?.finishedAt;
+
+    console.log('[Webhook] Run ID:', runId);
+    console.log('[Webhook] Status:', status);
+    console.log('[Webhook] Dataset ID:', defaultDatasetId);
 
     // Check if run was successful
     if (status !== 'SUCCEEDED') {
