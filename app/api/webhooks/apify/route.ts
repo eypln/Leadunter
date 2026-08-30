@@ -100,7 +100,11 @@ async function mapApifyItemToLead(item: any, groupConfigs: Array<{ name: string;
   const text = item.text || '';
   const authorName = item.user?.name || 'Unknown';
   const authorId = item.user?.id || null;
+  // NOTE: `facebookUrl` is the GROUP's URL (same for every post in that group) —
+  // it must NOT be used as the post's unique identifier. `url` is the actual
+  // per-post permalink.
   const facebookUrl = item.facebookUrl || '';
+  const postPermalink = item.url || '';
   
   // Extract title (first 200 chars of text)
   const title = text.substring(0, 200) || 'No title';
@@ -149,9 +153,10 @@ async function mapApifyItemToLead(item: any, groupConfigs: Array<{ name: string;
   // Extract phone number from text
   const phone = extractPhoneNumber(description || text);
   
-  // Generate post URL (we don't have individual post URL, use group URL)
-  // In a real scenario, you'd need to construct this from post ID
-  const postUrl = facebookUrl || `https://www.facebook.com/groups/post/${Date.now()}`;
+  // Use the post's own permalink as the unique post URL; only fall back to a
+  // generated placeholder if Apify didn't return one (never use facebookUrl —
+  // it's the group URL and identical for every post).
+  const postUrl = postPermalink || `https://www.facebook.com/groups/post/${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   // Phase 7: Detect scrape source
   const scrapeSource = detectScrapeSource(facebookUrl, groupConfigs);
@@ -363,7 +368,9 @@ export async function POST(request: NextRequest) {
         // wasting Gemini calls (and Vercel function time) on posts we
         // already have, which was causing the whole webhook to time out
         // and never persist anything when a run returned many items.
-        const rawPostUrl = (item.facebookUrl as string | undefined) || '';
+        // Use `url` (the post's own permalink), NOT `facebookUrl` (the group's
+        // URL, identical for every post in that group).
+        const rawPostUrl = (item.url as string | undefined) || '';
         if (rawPostUrl && (await leadExists(rawPostUrl))) {
           console.log('[Webhook] Duplicate (pre-AI), skipping:', rawPostUrl);
           duplicates++;
