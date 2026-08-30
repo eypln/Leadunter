@@ -92,12 +92,23 @@ function detectScrapeSource(facebookUrl: string, groupConfigs: Array<{ name: str
 }
 
 /**
+ * Parse a currency-formatted price string (e.g. "€1,800", "$650") into a
+ * plain number. Returns null if it can't be parsed.
+ */
+function parsePriceString(value: unknown): number | null {
+  if (typeof value !== 'string') return null;
+  const digits = value.replace(/[^0-9.]/g, '');
+  if (!digits) return null;
+  const num = parseFloat(digits);
+  return Number.isNaN(num) ? null : Math.round(num);
+}
+
+/**
  * Map Apify dataset item to our Lead structure
  * Data format from apify/facebook-groups-scraper
  */
 async function mapApifyItemToLead(item: any, groupConfigs: Array<{ name: string; url: string }> = []) {
   // Extract basic info
-  const text = item.text || '';
   const authorName = item.user?.name || 'Unknown';
   const authorId = item.user?.id || null;
   // NOTE: `facebookUrl` is the GROUP's URL (same for every post in that group) —
@@ -105,48 +116,56 @@ async function mapApifyItemToLead(item: any, groupConfigs: Array<{ name: string;
   // per-post permalink.
   const facebookUrl = item.facebookUrl || '';
   const postPermalink = item.url || '';
-  
-  // Extract title (first 200 chars of text)
-  const title = text.substring(0, 200) || 'No title';
-  
-  // Extract price from attachments
-  let price = null;
-  let location = null;
+
+  // Some group posts are reshares of another page's post (real estate
+  // agencies commonly do this) — the actual listing text/title/price/location
+  // lives under `sharedPost`, not on the top-level item.
+  const sharedPost = item.sharedPost;
+  const text = item.text || sharedPost?.text || '';
+
+  // Apify pre-parses title/price/location from the post's link-preview
+  // metadata when it links to a property listing — prefer that over
+  // guessing a title from the raw text.
+  const parsedTitle: string | null = item.title || sharedPost?.title || null;
+  const title = parsedTitle || (text ? text.substring(0, 200) : 'No title');
+
+  let price: number | null = parsePriceString(item.price) ?? parsePriceString(sharedPost?.price);
+  let location: string | null = item.location || sharedPost?.location || null;
   let description = text;
-  
-  if (item.attachments && item.attachments.length > 0) {
-    const firstAttachment = item.attachments[0];
-    
-    // Check if it's a product listing with properties
+
+  // Fall back to the (Marketplace-style) attachment property parsing when
+  // Apify didn't already pre-parse price/location for this post.
+  const attachments = (item.attachments?.length ? item.attachments : sharedPost?.attachments) || [];
+  if (attachments.length > 0) {
+    const firstAttachment = attachments[0];
+
     if (firstAttachment.properties && Array.isArray(firstAttachment.properties)) {
       for (const prop of firstAttachment.properties) {
-        if (prop.key === 'price_amount' && prop.value?.text) {
+        if (price === null && prop.key === 'price_amount' && prop.value?.text) {
           // Convert price from cents to euros (e.g., "55000" -> 550)
           const priceAmount = parseInt(prop.value.text);
           if (!isNaN(priceAmount)) {
             price = Math.round(priceAmount / 100);
           }
         }
-        if (prop.key === 'pickup_note' && prop.value?.text) {
+        if (location === null && prop.key === 'pickup_note' && prop.value?.text) {
           location = prop.value.text;
         }
-        if (prop.key === 'description' && prop.value?.text) {
+        if (!description && prop.key === 'description' && prop.value?.text) {
           description = prop.value.text;
         }
       }
     }
   }
-  
+
   // Extract image URLs from attachments
   const imageUrls: string[] = [];
-  if (item.attachments && Array.isArray(item.attachments)) {
-    for (const attachment of item.attachments) {
-      // Check for thumbnail or image URL
-      if (attachment.thumbnail) {
-        imageUrls.push(attachment.thumbnail);
-      } else if (attachment.image?.uri) {
-        imageUrls.push(attachment.image.uri);
-      }
+  for (const attachment of attachments) {
+    // Check for thumbnail or image URL
+    if (attachment.thumbnail) {
+      imageUrls.push(attachment.thumbnail);
+    } else if (attachment.image?.uri) {
+      imageUrls.push(attachment.image.uri);
     }
   }
   
