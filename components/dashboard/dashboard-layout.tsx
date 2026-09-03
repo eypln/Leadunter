@@ -17,13 +17,15 @@ import { useState } from 'react';
 import { usePWA } from '@/components/providers/pwa-provider';
 import { NotificationToggleButton } from '@/components/ui/pwa-install-banner';
 
+export type DashboardTab = 'dashboard' | 'leads' | 'messages' | 'settings';
+
 interface DashboardLayoutProps {
-  children: React.ReactNode;
+  children: React.ReactNode | ((activeTab: DashboardTab) => React.ReactNode);
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session, status } = useSession();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState<DashboardTab>('dashboard');
   const { isInstallable, isInstalled, install } = usePWA();
 
   if (status === 'loading') {
@@ -34,7 +36,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }
 
-  const navItems = [
+  const navItems: { id: DashboardTab; label: string; icon: typeof LayoutDashboard }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'leads', label: 'Leads', icon: Users },
     { id: 'messages', label: 'Messages', icon: MessageSquare },
@@ -132,7 +134,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main Content */}
       <main className="ml-64 min-h-screen">
-        {children}
+        {typeof children === 'function' ? children(activeTab) : children}
       </main>
     </div>
   );

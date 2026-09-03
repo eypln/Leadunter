@@ -190,6 +190,9 @@ PHASE 9 - COMPLETED: Polish & Optimization
 10. PHASE_6_COMPLETE.md documentation created
 
 ## Recent Changes
+- Dashboard navigation now renders dedicated Messages and Settings views.
+- Sent WhatsApp, Messenger, and Facebook comment actions are recorded in the `messages` table and shown in the Messages history.
+- Settings now contains account, browser notification, PWA installation, and Facebook group monitoring controls.
 - PHASE 8 COMPLETED (May 20, 2026)
 - Email notification service created with Resend
 - Vercel cron job configured (every 6 hours)

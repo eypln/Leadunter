@@ -1,7 +1,7 @@
 // Lead Hunter Service Worker
 // Phase 10: PWA Support
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const STATIC_CACHE = `lead-hunter-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `lead-hunter-dynamic-${CACHE_VERSION}`;
 

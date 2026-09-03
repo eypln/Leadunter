@@ -20,6 +20,8 @@ import { LeadTypeToggle } from './lead-type-toggle';
 import { LeadFeed } from './lead-feed';
 import { GroupsManager } from './groups-manager';
 import { AnalyticsSection } from './analytics-section';
+import { MessageHistory } from './message-history';
+import { SettingsPanel } from './settings-panel';
 import type { LeadType } from '@/lib/supabase/types';
 
 interface Stats {
@@ -94,6 +96,11 @@ export function DashboardContent() {
 
   return (
     <DashboardLayout>
+      {(activeTab) => activeTab === 'messages' ? (
+        <MessageHistory />
+      ) : activeTab === 'settings' ? (
+        <SettingsPanel />
+      ) : (
       <div className="p-8 space-y-8">
         {/* Header */}
         <motion.div
@@ -239,6 +246,7 @@ export function DashboardContent() {
           <GroupsManager />
         </motion.div>
       </div>
+      )}
     </DashboardLayout>
   );
 }

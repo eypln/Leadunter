@@ -21,7 +21,7 @@ export function LeadFeed({ leadType }: LeadFeedProps) {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | 'ALL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<LeadStatus | 'ALL'>('NEW');
   const { error: toastError } = useToast();
 
   const fetchLeads = useCallback(
@@ -40,6 +40,11 @@ export function LeadFeed({ leadType }: LeadFeedProps) {
           limit: String(PAGE_SIZE),
           offset: String(currentOffset),
         });
+
+        if (statusFilter !== 'ALL') {
+          params.set('status', statusFilter);
+        }
+
         const res = await fetch(`/api/leads?${params}`);
         if (!res.ok) throw new Error('Failed to fetch leads');
         const data = await res.json();
@@ -61,16 +66,14 @@ export function LeadFeed({ leadType }: LeadFeedProps) {
         setLoadingMore(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [leadType]
+    [leadType, statusFilter]
   );
 
   useEffect(() => {
     setOffset(0);
     setHasMore(true);
     fetchLeads(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leadType]);
+  }, [fetchLeads, leadType, statusFilter]);
 
   const filteredLeads = leads.filter((lead) => {
     const q = searchQuery.toLowerCase();
@@ -174,7 +177,7 @@ export function LeadFeed({ leadType }: LeadFeedProps) {
           </motion.div>
 
           {/* Load More */}
-          {hasMore && !searchQuery && statusFilter === 'ALL' && (
+          {hasMore && !searchQuery && (
             <div className="flex justify-center pt-4">
               <button
                 onClick={() => fetchLeads(false)}

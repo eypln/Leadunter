@@ -4,6 +4,14 @@
 
 ---
 
+## DASHBOARD NAVIGATION & OUTREACH HISTORY ✅ COMPLETED
+- [x] Sidebar now switches to functional Messages and Settings views
+- [x] Sent outreach is stored through `POST /api/messages`
+- [x] Message history lists sent channel, recipient, content, time, and source post
+- [x] Settings provides account, notification, PWA installation, and monitored-group controls
+
+---
+
 ## PHASE 0: PROJECT SETUP & INITIALIZATION ✅ COMPLETED
 **Goal**: Establish project foundation, memory bank, and development environment
 

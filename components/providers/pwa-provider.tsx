@@ -79,12 +79,28 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    // Register service worker
+    if (process.env.NODE_ENV === 'development') {
+      navigator.serviceWorker?.getRegistrations().then((registrations) =>
+        Promise.all(registrations.map((registration) => registration.unregister()))
+      );
+      caches?.keys().then((cacheNames) =>
+        Promise.all(
+          cacheNames
+            .filter((cacheName) => cacheName.startsWith('lead-hunter-'))
+            .map((cacheName) => caches.delete(cacheName))
+        )
+      );
+    }
+
+    // Register service worker only in production. Next.js development chunks
+    // are hash-based and must not be served from a cache-first worker.
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js', { scope: '/' })
-        .then((reg) => console.log('[PWA] SW registered, scope:', reg.scope))
-        .catch((err) => console.error('[PWA] SW registration failed:', err));
+      if (process.env.NODE_ENV === 'production') {
+        navigator.serviceWorker
+          .register('/sw.js', { scope: '/' })
+          .then((reg) => console.log('[PWA] SW registered, scope:', reg.scope))
+          .catch((err) => console.error('[PWA] SW registration failed:', err));
+      }
     }
 
     // Check if already running as installed PWA

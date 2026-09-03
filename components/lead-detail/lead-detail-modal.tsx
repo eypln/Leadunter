@@ -139,6 +139,17 @@ export function LeadDetailModal({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const trackMessageSent = (templateType: 'WHATSAPP' | 'MESSENGER' | 'FACEBOOK_COMMENT') => {
+    if (!lead || !message) return;
+
+    fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
+      body: JSON.stringify({ leadId: lead.id, templateType, messageText: message }),
+    }).catch(() => undefined);
+  };
+
   const getIntentColor = (score: number) => {
     if (score >= 8) return 'text-green-400';
     if (score >= 5) return 'text-yellow-400';
@@ -400,6 +411,7 @@ export function LeadDetailModal({
                                   href={`https://wa.me/${lead.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
+                                  onClick={() => trackMessageSent('WHATSAPP')}
                                   className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
                                 >
                                   <MessageSquare className="w-5 h-5" />
@@ -410,6 +422,7 @@ export function LeadDetailModal({
                                   href={`https://m.me/${lead.author_id}?text=${encodeURIComponent(message)}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
+                                  onClick={() => trackMessageSent('MESSENGER')}
                                   className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
                                 >
                                   <MessageSquare className="w-5 h-5" />
@@ -424,6 +437,7 @@ export function LeadDetailModal({
                               href={lead.post_url}
                               target="_blank"
                               rel="noopener noreferrer"
+                              onClick={() => trackMessageSent('FACEBOOK_COMMENT')}
                               className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
                             >
                               <MessageSquare className="w-5 h-5" />
