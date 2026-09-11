@@ -4,6 +4,13 @@ import { createClient } from '@supabase/supabase-js';
 import { geminiService } from '@/lib/ai/gemini-service';
 import { sendScraperJobNotification } from '@/lib/notifications/email-service';
 import { validateWebhookSecret } from '@/lib/api-auth';
+import {
+  hasStrongAgencySignal,
+  policyFromGroup,
+  shouldStoreLead,
+  type AgentDecision,
+  type LeadFilterPolicy,
+} from '@/lib/scraper/lead-filter';
 
 export const dynamic = 'force-dynamic';
 // Processing many items sequentially through Gemini AI can take a while;
@@ -63,7 +70,10 @@ function extractPhoneNumber(text: string): string | null {
  * Detect scrape source from Facebook URL
  * Returns 'FACEBOOK_MARKETPLACE', 'FACEBOOK_GROUP:GroupName', or 'UNKNOWN'
  */
-function detectScrapeSource(facebookUrl: string, groupConfigs: Array<{ name: string; url: string }>): string {
+function detectScrapeSource(
+  facebookUrl: string,
+  groupConfigs: Array<{ name: string; url: string }>
+): string {
   if (!facebookUrl) return 'UNKNOWN';
 
   // Check if it's from Facebook Marketplace
@@ -107,7 +117,16 @@ function parsePriceString(value: unknown): number | null {
  * Map Apify dataset item to our Lead structure
  * Data format from apify/facebook-groups-scraper
  */
-async function mapApifyItemToLead(item: any, groupConfigs: Array<{ name: string; url: string }> = []) {
+async function mapApifyItemToLead(
+  item: any,
+  groupConfigs: Array<{
+    name: string;
+    url: string;
+    owner_only?: boolean;
+    exclude_agents?: boolean;
+    minimum_intent_score?: number;
+  }> = []
+) {
   // Extract basic info
   const authorName = item.user?.name || 'Unknown';
   const authorId = item.user?.id || null;
@@ -185,6 +204,7 @@ async function mapApifyItemToLead(item: any, groupConfigs: Array<{ name: string;
   let leadType: 'OWNER' | 'CLIENT' = 'OWNER'; // Default
   let intentScore: number | null = null;
   let isAgent = false;
+  let agentDecision: AgentDecision = 'UNKNOWN';
 
   try {
     // Step 1: Classify lead type (OWNER vs CLIENT)
@@ -206,13 +226,20 @@ async function mapApifyItemToLead(item: any, groupConfigs: Array<{ name: string;
       });
       console.log('[AI] Intent score:', intentScore);
 
-      // Detect if author is an agent
-      isAgent = await geminiService.detectAgent({
-        title: title,
-        description: description,
-        author_name: authorName,
-      });
-      console.log('[AI] Is agent:', isAgent);
+      const listingText = `${title} ${description} ${authorName}`;
+      if (hasStrongAgencySignal(listingText)) {
+        agentDecision = 'AGENT';
+        isAgent = true;
+        console.log('[Filter] Strong agency signal detected:', authorName);
+      } else {
+        agentDecision = await geminiService.detectAgent({
+          title: title,
+          description: description,
+          author_name: authorName,
+        });
+        isAgent = agentDecision === 'AGENT';
+      }
+      console.log('[AI] Agent decision:', agentDecision);
     } else {
       console.log('[AI] CLIENT lead - skipping intent/agent analysis');
     }
@@ -246,7 +273,29 @@ async function mapApifyItemToLead(item: any, groupConfigs: Array<{ name: string;
     lead_type: leadType,
     intent_score: intentScore,
     is_agent: isAgent,
+    agent_decision: agentDecision,
   };
+}
+
+function getGroupFilterPolicy(
+  scrapeSource: string,
+  groupConfigs: Array<{
+    name: string;
+    owner_only?: boolean;
+    exclude_agents?: boolean;
+    minimum_intent_score?: number;
+  }>
+): LeadFilterPolicy {
+  const groupName = scrapeSource.startsWith('FACEBOOK_GROUP:')
+    ? scrapeSource.replace('FACEBOOK_GROUP:', '')
+    : '';
+  const group = groupConfigs.find((config) => config.name === groupName);
+
+  return policyFromGroup({
+    ownerOnly: group?.owner_only,
+    excludeAgents: group?.exclude_agents,
+    minimumIntentScore: group?.minimum_intent_score,
+  });
 }
 
 /**
@@ -378,7 +427,7 @@ export async function POST(request: NextRequest) {
     // Phase 7: Fetch group configs for source detection
     const { data: groupConfigs, error: groupsErr } = await supabase
       .from('group_configs')
-      .select('name, url');
+      .select('name, url, owner_only, exclude_agents, minimum_intent_score');
     if (groupsErr) console.warn('[Webhook] Could not load group_configs:', groupsErr.message);
     const groups = groupConfigs || [];
     console.log(`[Webhook] Loaded ${groups.length} group configs for source detection`);
@@ -390,6 +439,9 @@ export async function POST(request: NextRequest) {
     let ownerLeads = 0;
     let clientLeads = 0;
     let agentsFiltered = 0;
+    let clientsFiltered = 0;
+    let unknownAgentsFiltered = 0;
+    let lowScoreFiltered = 0;
 
     for (const item of items) {
       try {
@@ -407,7 +459,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Map to our lead structure (with AI classification)
-        const lead = await mapApifyItemToLead(item, groups);
+        const { agent_decision: agentDecision, ...lead } = await mapApifyItemToLead(item, groups);
 
         // Skip if no post URL (invalid data)
         if (!lead.post_url) {
@@ -425,16 +477,23 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Track lead types
-        if (lead.lead_type === 'OWNER') {
-          ownerLeads++;
-          if (lead.is_agent) {
-            agentsFiltered++;
-            console.log('[Webhook] Agent detected (stored + flagged):', lead.author_name);
-          }
-        } else {
-          clientLeads++;
+        const filterResult = shouldStoreLead(
+          lead,
+          agentDecision,
+          getGroupFilterPolicy(lead.scrape_source, groups)
+        );
+
+        if (!filterResult.accepted) {
+          if (filterResult.reason === 'CLIENT') clientsFiltered++;
+          if (filterResult.reason === 'AGENT') agentsFiltered++;
+          if (filterResult.reason === 'UNKNOWN_AGENT') unknownAgentsFiltered++;
+          if (filterResult.reason === 'LOW_SCORE') lowScoreFiltered++;
+          console.log(`[Webhook] Filtered ${filterResult.reason}:`, lead.author_name);
+          continue;
         }
+
+        if (lead.lead_type === 'OWNER') ownerLeads++;
+        else clientLeads++;
 
         // Insert into database
         await insertLead(lead);
@@ -468,6 +527,9 @@ export async function POST(request: NextRequest) {
     console.log(`[Webhook] OWNER leads   : ${ownerLeads}`);
     console.log(`[Webhook] CLIENT leads  : ${clientLeads}`);
     console.log(`[Webhook] Agents flagged: ${agentsFiltered}`);
+    console.log(`[Webhook] Clients filtered: ${clientsFiltered}`);
+    console.log(`[Webhook] Unknown agents: ${unknownAgentsFiltered}`);
+    console.log(`[Webhook] Low scores   : ${lowScoreFiltered}`);
     console.log(`[Webhook] Duplicates    : ${duplicates}`);
     console.log(`[Webhook] Errors        : ${errors}`);
 
@@ -484,6 +546,9 @@ export async function POST(request: NextRequest) {
         ownerLeads: ownerLeads,
         clientLeads: clientLeads,
         agentsDetected: agentsFiltered,
+        clientsFiltered,
+        unknownAgentsFiltered,
+        lowScoreFiltered,
         startedAt: new Date(startedAt),
         completedAt: new Date(finishedAt),
         duration: duration,

@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS group_configs (
   name TEXT NOT NULL,
   url TEXT NOT NULL UNIQUE,
   is_active BOOLEAN DEFAULT true,
+  owner_only BOOLEAN NOT NULL DEFAULT false,
+  exclude_agents BOOLEAN NOT NULL DEFAULT true,
+  minimum_intent_score INTEGER NOT NULL DEFAULT 7 CHECK (minimum_intent_score BETWEEN 0 AND 10),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -48,6 +51,9 @@ COMMENT ON TABLE group_configs IS 'Configuration for Facebook Groups to scrape f
 COMMENT ON COLUMN group_configs.name IS 'Display name for the Facebook Group';
 COMMENT ON COLUMN group_configs.url IS 'Full Facebook Group URL to scrape';
 COMMENT ON COLUMN group_configs.is_active IS 'Whether this group is currently being scraped';
+COMMENT ON COLUMN group_configs.owner_only IS 'Keep only property-owner listings';
+COMMENT ON COLUMN group_configs.exclude_agents IS 'Reject agents and agencies';
+COMMENT ON COLUMN group_configs.minimum_intent_score IS 'Minimum direct-owner confidence score';
 
 -- =============================================
 -- 3. Enable Row Level Security

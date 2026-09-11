@@ -21,13 +21,30 @@ export async function PATCH(
   if (!session) return unauthorizedResponse();
   try {
     const body = await request.json();
-    const allowedFields = ['name', 'is_active'];
+    const allowedFields = [
+      'name',
+      'is_active',
+      'owner_only',
+      'exclude_agents',
+      'minimum_intent_score',
+    ];
     const updates: Record<string, unknown> = {};
 
     for (const field of allowedFields) {
       if (field in body) {
         updates[field] = body[field];
       }
+    }
+
+    if ('minimum_intent_score' in updates) {
+      const score = Number(updates.minimum_intent_score);
+      if (!Number.isInteger(score) || score < 0 || score > 10) {
+        return NextResponse.json(
+          { error: 'minimum_intent_score must be an integer from 0 to 10' },
+          { status: 400 }
+        );
+      }
+      updates.minimum_intent_score = score;
     }
 
     if (Object.keys(updates).length === 0) {

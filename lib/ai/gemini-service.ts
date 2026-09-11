@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import type { AgentDecision } from '@/lib/scraper/lead-filter';
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -167,7 +168,7 @@ Respond with ONLY a single number from 1-10, nothing else.`;
     title: string;
     description: string;
     author_name: string;
-  }): Promise<boolean> {
+  }): Promise<AgentDecision> {
     const prompt = `Analyze this rental property listing and determine if the author is a real estate agent or agency.
 
 LISTING:
@@ -188,17 +189,22 @@ OWNER INDICATORS:
 - Casual, conversational tone
 - Direct owner mentions
 
-Respond with ONLY "true" if this is an agent, or "false" if this is a property owner. No other text.`;
+  Respond with ONLY one of these values: AGENT, DIRECT_OWNER, or UNKNOWN.
+  Use UNKNOWN if the evidence is insufficient. Do not guess. No other text.`;
 
     try {
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
-      const text = response.text().trim().toLowerCase();
-      
-      return text === 'true';
+      const text = response.text().trim().toUpperCase();
+
+      if (text === 'AGENT' || text === 'DIRECT_OWNER' || text === 'UNKNOWN') {
+        return text as AgentDecision;
+      }
+
+      return 'UNKNOWN';
     } catch (error) {
       console.error('Gemini API error:', error);
-      return false; // Default to not agent
+      return 'UNKNOWN';
     }
   }
 

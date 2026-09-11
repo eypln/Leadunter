@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { leadRepository } from '@/lib/repositories/lead-repository';
 import { geminiService } from '@/lib/ai/gemini-service';
+import { hasStrongAgencySignal } from '@/lib/scraper/lead-filter';
 import { requireAuth, unauthorizedResponse } from '@/lib/api-auth';
 import type { LeadStatus } from '@/lib/supabase/types';
 
@@ -78,18 +79,21 @@ export async function PATCH(
         );
       }
 
-      const [intentScore, isAgent] = await Promise.all([
-        geminiService.analyzeIntentScore({
-          title: lead.title,
-          description: lead.description,
-          author_name: lead.author_name,
-        }),
-        geminiService.detectAgent({
-          title: lead.title,
-          description: lead.description,
-          author_name: lead.author_name,
-        }),
-      ]);
+      const intentScore = await geminiService.analyzeIntentScore({
+        title: lead.title,
+        description: lead.description,
+        author_name: lead.author_name,
+      });
+      const agentDecision = hasStrongAgencySignal(
+        `${lead.title} ${lead.description} ${lead.author_name}`
+      )
+        ? 'AGENT'
+        : await geminiService.detectAgent({
+            title: lead.title,
+            description: lead.description,
+            author_name: lead.author_name,
+          });
+      const isAgent = agentDecision === 'AGENT';
 
       const { data, error } = await supabase
         .from('leads')

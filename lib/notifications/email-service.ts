@@ -20,6 +20,9 @@ export interface ScraperJobNotification {
   ownerLeads?: number;
   clientLeads?: number;
   agentsDetected?: number;
+  clientsFiltered?: number;
+  unknownAgentsFiltered?: number;
+  lowScoreFiltered?: number;
   startedAt: Date;
   completedAt: Date;
   duration: number; // in seconds

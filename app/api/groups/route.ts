@@ -64,7 +64,14 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('group_configs')
-      .insert({ name: name.trim(), url: url.trim(), is_active: true })
+      .insert({
+        name: name.trim(),
+        url: url.trim(),
+        is_active: true,
+        owner_only: body.ownerOnly ?? false,
+        exclude_agents: body.excludeAgents ?? true,
+        minimum_intent_score: body.minimumIntentScore ?? 7,
+      })
       .select()
       .single();
 

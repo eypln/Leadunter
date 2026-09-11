@@ -13,6 +13,12 @@ import { ApifyClient } from 'apify-client';
 import { createClient } from '@supabase/supabase-js';
 import { geminiService } from '@/lib/ai/gemini-service';
 import { requireAuth, unauthorizedResponse } from '@/lib/api-auth';
+import {
+  hasStrongAgencySignal,
+  policyFromGroup,
+  shouldStoreLead,
+  type AgentDecision,
+} from '@/lib/scraper/lead-filter';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,7 +61,13 @@ function detectScrapeSource(
 }
 
 type ApifyItem = Record<string, unknown>;
-type GroupConfig = { name: string; url: string };
+type GroupConfig = {
+  name: string;
+  url: string;
+  owner_only?: boolean;
+  exclude_agents?: boolean;
+  minimum_intent_score?: number;
+};
 
 async function processItem(item: ApifyItem, groups: GroupConfig[]) {
   const text = (item.text as string) || '';
@@ -101,14 +113,19 @@ async function processItem(item: ApifyItem, groups: GroupConfig[]) {
   let leadType: 'OWNER' | 'CLIENT' = 'OWNER';
   let intentScore: number | null = null;
   let isAgent = false;
+  let agentDecision: AgentDecision = 'UNKNOWN';
 
   try {
     leadType = await geminiService.classifyLeadType({ title, description });
     if (leadType === 'OWNER') {
-      [intentScore, isAgent] = await Promise.all([
-        geminiService.analyzeIntentScore({ title, description, author_name: authorName }),
-        geminiService.detectAgent({ title, description, author_name: authorName }),
-      ]);
+      intentScore = await geminiService.analyzeIntentScore({ title, description, author_name: authorName });
+      if (hasStrongAgencySignal(`${title} ${description} ${authorName}`)) {
+        agentDecision = 'AGENT';
+        isAgent = true;
+      } else {
+        agentDecision = await geminiService.detectAgent({ title, description, author_name: authorName });
+        isAgent = agentDecision === 'AGENT';
+      }
     }
   } catch (e) {
     console.error('[Recovery] AI error:', e);
@@ -132,6 +149,7 @@ async function processItem(item: ApifyItem, groups: GroupConfig[]) {
     lead_type: leadType,
     intent_score: intentScore,
     is_agent: isAgent,
+    agent_decision: agentDecision,
     created_at: new Date().toISOString(),
   };
 }
@@ -219,7 +237,9 @@ export async function POST(request: NextRequest) {
     console.log(`[Recovery] ${items.length} items in dataset`);
 
     // Load group configs
-    const { data: groupConfigs } = await supabase.from('group_configs').select('name, url');
+    const { data: groupConfigs } = await supabase
+      .from('group_configs')
+      .select('name, url, owner_only, exclude_agents, minimum_intent_score');
     const groups = groupConfigs || [];
 
     let inserted = 0;
@@ -229,12 +249,38 @@ export async function POST(request: NextRequest) {
 
     for (const item of items) {
       try {
-        const lead = await processItem(item as ApifyItem, groups as GroupConfig[]);
+        const { agent_decision: agentDecision, ...lead } = await processItem(
+          item as ApifyItem,
+          groups as GroupConfig[]
+        );
 
         const exists = await leadExists(lead.post_url);
         if (exists) {
           duplicates++;
           results.push({ title: lead.title.substring(0, 60), status: 'duplicate' });
+          continue;
+        }
+
+        const groupName = lead.scrape_source.startsWith('FACEBOOK_GROUP:')
+          ? lead.scrape_source.replace('FACEBOOK_GROUP:', '')
+          : '';
+        const group = groups.find((config) => config.name === groupName);
+        const filterResult = shouldStoreLead(
+          lead,
+          agentDecision,
+          policyFromGroup({
+            ownerOnly: group?.owner_only,
+            excludeAgents: group?.exclude_agents,
+            minimumIntentScore: group?.minimum_intent_score,
+          })
+        );
+
+        if (!filterResult.accepted) {
+          results.push({
+            title: lead.title.substring(0, 60),
+            status: `filtered:${filterResult.reason}`,
+            leadType: lead.lead_type,
+          });
           continue;
         }
 

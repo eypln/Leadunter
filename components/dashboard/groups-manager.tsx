@@ -81,6 +81,21 @@ export function GroupsManager() {
     }
   };
 
+  const updateMinimumScore = async (group: GroupConfig, value: number) => {
+    const previousScore = group.minimum_intent_score;
+    setGroups(prev => prev.map(g => g.id === group.id ? { ...g, minimum_intent_score: value } : g));
+    try {
+      const res = await fetch(`/api/groups/${group.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minimum_intent_score: value }),
+      });
+      if (!res.ok) throw new Error('Update failed');
+    } catch {
+      setGroups(prev => prev.map(g => g.id === group.id ? { ...g, minimum_intent_score: previousScore } : g));
+    }
+  };
+
   const deleteGroup = async (id: string) => {
     if (!confirm('Remove this Facebook group from monitoring?')) return;
     setGroups(prev => prev.filter(g => g.id !== id));
@@ -340,6 +355,24 @@ export function GroupsManager() {
                     )}
                   </div>
                   <p className="text-xs text-gray-500 truncate mt-0.5">{group.url}</p>
+                  <div className="flex items-center gap-2 mt-2 text-[11px] text-gray-500">
+                    {!group.owner_only && <span className="text-blue-400">Owners + looking for</span>}
+                    {group.owner_only && <span className="text-emerald-400">Owner only</span>}
+                    {group.exclude_agents && <span className="text-amber-400">Owner agents excluded</span>}
+                    <label className="flex items-center gap-1">
+                      <span>Min score</span>
+                      <select
+                        value={group.minimum_intent_score ?? 7}
+                        onChange={event => updateMinimumScore(group, Number(event.target.value))}
+                        className="bg-gray-900 border border-gray-700 rounded px-1 py-0.5 text-gray-300"
+                        aria-label={`Minimum owner score for ${group.name}`}
+                      >
+                        {Array.from({ length: 11 }, (_, score) => (
+                          <option key={score} value={score}>{score === 0 ? 'off' : score}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1 flex-shrink-0">
