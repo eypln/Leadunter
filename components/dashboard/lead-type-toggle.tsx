@@ -12,7 +12,7 @@ interface LeadTypeToggleProps {
 
 export function LeadTypeToggle({ value, onChange }: LeadTypeToggleProps) {
   const options: { value: LeadType; label: string; icon: typeof Building2 }[] = [
-    { value: 'OWNER', label: 'Property Owners', icon: Building2 },
+    { value: 'OWNER', label: 'Property Posts', icon: Building2 },
     { value: 'CLIENT', label: 'Looking to Rent', icon: UserCheck },
   ];
 

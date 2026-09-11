@@ -161,6 +161,7 @@ export function LeadDetailModal({
     RESPONDED: 'bg-green-500',
     SKIPPED: 'bg-gray-500',
     INTERESTED: 'bg-purple-500',
+    AGENT: 'bg-orange-500',
   };
 
   return (
@@ -475,6 +476,12 @@ export function LeadDetailModal({
                     className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium"
                   >
                     Skip
+                  </button>
+                  <button
+                    onClick={() => updateStatus('AGENT')}
+                    className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors text-sm font-medium"
+                  >
+                    Agent
                   </button>
                   <button
                     onClick={() => updateStatus('INTERESTED')}

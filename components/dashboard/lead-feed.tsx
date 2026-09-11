@@ -91,7 +91,7 @@ export function LeadFeed({ leadType }: LeadFeedProps) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <h2 className="text-2xl font-bold text-white">
-            {leadType === 'OWNER' ? 'Property Owners' : 'Looking to Rent'}
+            {leadType === 'OWNER' ? 'Property Posts' : 'Looking to Rent'}
           </h2>
           {!loading && (
             <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-gray-800 text-gray-400">
@@ -134,6 +134,7 @@ export function LeadFeed({ leadType }: LeadFeedProps) {
             <option value="RESPONDED">Responded</option>
             <option value="SKIPPED">Skipped</option>
             <option value="INTERESTED">Interested</option>
+            <option value="AGENT">Agent</option>
           </select>
         </div>
       </div>

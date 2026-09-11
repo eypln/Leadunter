@@ -140,7 +140,8 @@ export class LeadRepository {
       new: 0,
       responded: 0,
       skipped: 0,
-      interested: 0
+      interested: 0,
+      agent: 0
     };
 
     data?.forEach((lead: any) => {

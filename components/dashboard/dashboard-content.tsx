@@ -30,6 +30,7 @@ interface Stats {
   responded: number;
   skipped: number;
   interested: number;
+  agent: number;
 }
 
 type ScrapeStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -215,6 +216,14 @@ export function DashboardContent() {
               trend="-3%"
               trendUp={false}
               gradient="from-orange-500 to-red-500"
+            />
+            <StatsCard
+              title="Agents"
+              value={stats?.agent || 0}
+              icon={AlertCircle}
+              trend=""
+              trendUp={false}
+              gradient="from-amber-500 to-red-500"
             />
           </motion.div>
         )}

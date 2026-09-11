@@ -2,7 +2,7 @@
 
 export type LeadType = 'OWNER' | 'CLIENT';
 
-export type LeadStatus = 'NEW' | 'RESPONDED' | 'SKIPPED' | 'INTERESTED';
+export type LeadStatus = 'NEW' | 'RESPONDED' | 'SKIPPED' | 'INTERESTED' | 'AGENT';
 
 export type MessageTemplateType = 'WHATSAPP' | 'MESSENGER' | 'FACEBOOK_COMMENT';
 

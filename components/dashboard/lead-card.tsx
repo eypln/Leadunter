@@ -53,6 +53,7 @@ export const LeadCard = forwardRef<HTMLDivElement, LeadCardProps>(
     RESPONDED: 'bg-green-500/10 text-green-400 border-green-500/20',
     SKIPPED: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
     INTERESTED: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    AGENT: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
   };
 
   const getIntentColor = (score: number) => {

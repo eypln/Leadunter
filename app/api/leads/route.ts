@@ -6,7 +6,7 @@ import type { LeadType, LeadStatus } from '@/lib/supabase/types';
 export const dynamic = 'force-dynamic';
 
 const VALID_LEAD_TYPES: LeadType[] = ['OWNER', 'CLIENT'];
-const VALID_STATUSES: LeadStatus[] = ['NEW', 'RESPONDED', 'SKIPPED', 'INTERESTED'];
+const VALID_STATUSES: LeadStatus[] = ['NEW', 'RESPONDED', 'SKIPPED', 'INTERESTED', 'AGENT'];
 const MAX_LIMIT = 100;
 
 export async function GET(request: NextRequest) {
