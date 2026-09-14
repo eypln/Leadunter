@@ -13,12 +13,14 @@ import {
   Play,
   CheckCircle2,
   AlertCircle,
+  Store,
 } from 'lucide-react';
 import { DashboardLayout } from './dashboard-layout';
 import { StatsCard } from './stats-card';
 import { LeadTypeToggle } from './lead-type-toggle';
 import { LeadFeed } from './lead-feed';
 import { GroupsManager } from './groups-manager';
+import { MarketplaceManager } from './marketplace-manager';
 import { AnalyticsSection } from './analytics-section';
 import { MessageHistory } from './message-history';
 import { SettingsPanel } from './settings-panel';
@@ -39,8 +41,10 @@ export function DashboardContent() {
   const [leadType, setLeadType] = useState<LeadType>('OWNER');
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [scrapeStatus, setScrapeStatus] = useState<ScrapeStatus>('idle');
-  const [scrapeMessage, setScrapeMessage] = useState<string>('');
+  const [groupsStatus, setGroupsStatus] = useState<ScrapeStatus>('idle');
+  const [groupsMessage, setGroupsMessage] = useState<string>('');
+  const [marketplaceStatus, setMarketplaceStatus] = useState<ScrapeStatus>('idle');
+  const [marketplaceMessage, setMarketplaceMessage] = useState<string>('');
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
@@ -61,10 +65,10 @@ export function DashboardContent() {
     fetchStats();
   }, [fetchStats]);
 
-  const handleTriggerScrape = async () => {
-    if (scrapeStatus === 'loading') return;
-    setScrapeStatus('loading');
-    setScrapeMessage('');
+  const handleTriggerGroupsScrape = async () => {
+    if (groupsStatus === 'loading') return;
+    setGroupsStatus('loading');
+    setGroupsMessage('');
 
     try {
       const res = await fetch('/api/scraper/trigger', {
@@ -75,22 +79,49 @@ export function DashboardContent() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setScrapeStatus('success');
-        setScrapeMessage(
-          `Scraper started! Scanning ${data.groupsScraped} group${data.groupsScraped !== 1 ? 's' : ''}. Results arrive via webhook.`
-        );
+        setGroupsStatus('success');
+        setGroupsMessage(`Groups scan started! (${data.groupsScraped} group${data.groupsScraped !== 1 ? 's' : ''})`);
       } else {
-        setScrapeStatus('error');
-        setScrapeMessage(data.error || 'Failed to start scraper');
+        setGroupsStatus('error');
+        setGroupsMessage(data.error || 'Failed to start groups scraper');
       }
     } catch {
-      setScrapeStatus('error');
-      setScrapeMessage('Network error — could not reach scraper API');
+      setGroupsStatus('error');
+      setGroupsMessage('Network error');
     } finally {
-      // Reset to idle after 6 seconds so user can re-trigger
       setTimeout(() => {
-        setScrapeStatus('idle');
-        setScrapeMessage('');
+        setGroupsStatus('idle');
+        setGroupsMessage('');
+      }, 6000);
+    }
+  };
+
+  const handleTriggerMarketplaceScrape = async () => {
+    if (marketplaceStatus === 'loading') return;
+    setMarketplaceStatus('loading');
+    setMarketplaceMessage('');
+
+    try {
+      const res = await fetch('/api/scraper/trigger-marketplace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setMarketplaceStatus('success');
+        setMarketplaceMessage(`Marketplace scan started! (${data.searchesScraped} search${data.searchesScraped !== 1 ? 'es' : ''})`);
+      } else {
+        setMarketplaceStatus('error');
+        setMarketplaceMessage(data.error || 'Failed to start marketplace scraper');
+      }
+    } catch {
+      setMarketplaceStatus('error');
+      setMarketplaceMessage('Network error');
+    } finally {
+      setTimeout(() => {
+        setMarketplaceStatus('idle');
+        setMarketplaceMessage('');
       }, 6000);
     }
   };
@@ -119,54 +150,103 @@ export function DashboardContent() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Manual Scrape Trigger */}
-            <div className="flex flex-col items-end gap-1">
-              <motion.button
-                whileHover={{ scale: scrapeStatus === 'loading' ? 1 : 1.03 }}
-                whileTap={{ scale: scrapeStatus === 'loading' ? 1 : 0.97 }}
-                onClick={handleTriggerScrape}
-                disabled={scrapeStatus === 'loading'}
-                className={[
-                  'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all',
-                  scrapeStatus === 'idle'
-                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/30'
-                    : scrapeStatus === 'loading'
-                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                    : scrapeStatus === 'success'
-                    ? 'bg-emerald-900/40 text-emerald-400 border border-emerald-600/30'
-                    : 'bg-red-900/40 text-red-400 border border-red-600/30',
-                ].join(' ')}
-              >
-                {scrapeStatus === 'loading' ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : scrapeStatus === 'success' ? (
-                  <CheckCircle2 className="w-4 h-4" />
-                ) : scrapeStatus === 'error' ? (
-                  <AlertCircle className="w-4 h-4" />
-                ) : (
-                  <Play className="w-4 h-4" />
-                )}
-                {scrapeStatus === 'loading'
-                  ? 'Starting scraper…'
-                  : scrapeStatus === 'success'
-                  ? 'Scraper started!'
-                  : scrapeStatus === 'error'
-                  ? 'Failed — retry'
-                  : 'Scan Now'}
-              </motion.button>
-
-              {/* Status message */}
-              {scrapeMessage && (
-                <motion.p
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`text-xs max-w-xs text-right ${
-                    scrapeStatus === 'error' ? 'text-red-400' : 'text-emerald-400'
-                  }`}
+            {/* Manual Scrape Triggers */}
+            <div className="flex items-center gap-3">
+              {/* Scan Groups Button */}
+              <div className="flex flex-col items-end gap-1">
+                <motion.button
+                  whileHover={{ scale: groupsStatus === 'loading' ? 1 : 1.03 }}
+                  whileTap={{ scale: groupsStatus === 'loading' ? 1 : 0.97 }}
+                  onClick={handleTriggerGroupsScrape}
+                  disabled={groupsStatus === 'loading'}
+                  className={[
+                    'flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all',
+                    groupsStatus === 'idle'
+                      ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-900/30'
+                      : groupsStatus === 'loading'
+                      ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                      : groupsStatus === 'success'
+                      ? 'bg-purple-900/40 text-purple-400 border border-purple-600/30'
+                      : 'bg-red-900/40 text-red-400 border border-red-600/30',
+                  ].join(' ')}
                 >
-                  {scrapeMessage}
-                </motion.p>
-              )}
+                  {groupsStatus === 'loading' ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : groupsStatus === 'success' ? (
+                    <CheckCircle2 className="w-4 h-4" />
+                  ) : groupsStatus === 'error' ? (
+                    <AlertCircle className="w-4 h-4" />
+                  ) : (
+                    <Users className="w-4 h-4" />
+                  )}
+                  {groupsStatus === 'loading'
+                    ? 'Scanning…'
+                    : groupsStatus === 'success'
+                    ? 'Started!'
+                    : groupsStatus === 'error'
+                    ? 'Failed'
+                    : 'Scan Groups'}
+                </motion.button>
+                {groupsMessage && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`text-xs max-w-[140px] text-right ${
+                      groupsStatus === 'error' ? 'text-red-400' : 'text-purple-400'
+                    }`}
+                  >
+                    {groupsMessage}
+                  </motion.p>
+                )}
+              </div>
+
+              {/* Scan Marketplace Button */}
+              <div className="flex flex-col items-end gap-1">
+                <motion.button
+                  whileHover={{ scale: marketplaceStatus === 'loading' ? 1 : 1.03 }}
+                  whileTap={{ scale: marketplaceStatus === 'loading' ? 1 : 0.97 }}
+                  onClick={handleTriggerMarketplaceScrape}
+                  disabled={marketplaceStatus === 'loading'}
+                  className={[
+                    'flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all',
+                    marketplaceStatus === 'idle'
+                      ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/30'
+                      : marketplaceStatus === 'loading'
+                      ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                      : marketplaceStatus === 'success'
+                      ? 'bg-blue-900/40 text-blue-400 border border-blue-600/30'
+                      : 'bg-red-900/40 text-red-400 border border-red-600/30',
+                  ].join(' ')}
+                >
+                  {marketplaceStatus === 'loading' ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : marketplaceStatus === 'success' ? (
+                    <CheckCircle2 className="w-4 h-4" />
+                  ) : marketplaceStatus === 'error' ? (
+                    <AlertCircle className="w-4 h-4" />
+                  ) : (
+                    <Store className="w-4 h-4" />
+                  )}
+                  {marketplaceStatus === 'loading'
+                    ? 'Scanning…'
+                    : marketplaceStatus === 'success'
+                    ? 'Started!'
+                    : marketplaceStatus === 'error'
+                    ? 'Failed'
+                    : 'Scan Marketplace'}
+                </motion.button>
+                {marketplaceMessage && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`text-xs max-w-[140px] text-right ${
+                      marketplaceStatus === 'error' ? 'text-red-400' : 'text-blue-400'
+                    }`}
+                  >
+                    {marketplaceMessage}
+                  </motion.p>
+                )}
+              </div>
             </div>
 
             <LeadTypeToggle value={leadType} onChange={setLeadType} />
@@ -253,6 +333,15 @@ export function DashboardContent() {
           transition={{ delay: 0.3 }}
         >
           <GroupsManager />
+        </motion.div>
+
+        {/* Facebook Marketplace Manager */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+        >
+          <MarketplaceManager />
         </motion.div>
       </div>
       )}

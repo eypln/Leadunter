@@ -3,6 +3,10 @@
     {
       "path": "/api/scraper/trigger",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/scraper/trigger-marketplace",
+      "schedule": "0 3,9,15,21 * * *"
     }
   ]
 }

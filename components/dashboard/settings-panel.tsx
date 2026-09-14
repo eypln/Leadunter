@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { Bell, CheckCircle2, Download, MonitorSmartphone, ShieldCheck } from 'lucide-react';
 import { usePWA } from '@/components/providers/pwa-provider';
 import { GroupsManager } from './groups-manager';
+import { MarketplaceManager } from './marketplace-manager';
 
 export function SettingsPanel() {
   const { data: session } = useSession();
@@ -51,6 +52,7 @@ export function SettingsPanel() {
       </section>
 
       <GroupsManager />
+      <MarketplaceManager />
     </div>
   );
 }

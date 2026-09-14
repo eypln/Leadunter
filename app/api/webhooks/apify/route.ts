@@ -199,60 +199,11 @@ async function mapApifyItemToLead(
   // Phase 7: Detect scrape source
   const scrapeSource = detectScrapeSource(facebookUrl, groupConfigs);
 
-  // ===== PHASE 6: AI CLASSIFICATION & ANALYSIS =====
-  console.log('[AI] Classifying lead type...');
-  let leadType: 'OWNER' | 'CLIENT' = 'OWNER'; // Default
-  let intentScore: number | null = null;
-  let isAgent = false;
-  let agentDecision: AgentDecision = 'UNKNOWN';
-
-  try {
-    // Step 1: Classify lead type (OWNER vs CLIENT)
-    leadType = await geminiService.classifyLeadType({
-      title: title,
-      description: description,
-    });
-    console.log('[AI] Lead classified as:', leadType);
-
-    // Step 2: If OWNER, analyze intent score and detect agents
-    if (leadType === 'OWNER') {
-      console.log('[AI] Analyzing OWNER lead...');
-      
-      // Analyze intent score (1-10)
-      intentScore = await geminiService.analyzeIntentScore({
-        title: title,
-        description: description,
-        author_name: authorName,
-      });
-      console.log('[AI] Intent score:', intentScore);
-
-      const listingText = `${title} ${description} ${authorName}`;
-      if (hasStrongAgencySignal(listingText)) {
-        agentDecision = 'AGENT';
-        isAgent = true;
-        console.log('[Filter] Strong agency signal detected:', authorName);
-      } else {
-        agentDecision = await geminiService.detectAgent({
-          title: title,
-          description: description,
-          author_name: authorName,
-        });
-        isAgent = agentDecision === 'AGENT';
-      }
-      console.log('[AI] Agent decision:', agentDecision);
-    } else {
-      console.log('[AI] CLIENT lead - skipping intent/agent analysis');
-    }
-  } catch (error) {
-    console.error('[AI] Error during AI analysis:', error);
-    // Continue with defaults if AI fails
-  }
-
-  // Fallback: ensure OWNER leads always have an intent score
-  if (leadType === 'OWNER' && intentScore === null) {
-    intentScore = 5; // Neutral score when AI analysis fails
-    console.log('[AI] Fallback intent score applied: 5');
-  }
+  const { leadType, intentScore, isAgent, agentDecision } = await classifyAndScoreLead(
+    title,
+    description,
+    authorName
+  );
 
   return {
     post_url: postUrl,
@@ -277,6 +228,64 @@ async function mapApifyItemToLead(
   };
 }
 
+/**
+ * Shared OWNER/CLIENT classification + intent score + agent detection,
+ * used by both the Facebook Groups mapper and the Marketplace mapper below.
+ */
+async function classifyAndScoreLead(title: string, description: string, authorName: string) {
+  console.log('[AI] Classifying lead type...');
+  let leadType: 'OWNER' | 'CLIENT' = 'OWNER'; // Default
+  let intentScore: number | null = null;
+  let isAgent = false;
+  let agentDecision: AgentDecision = 'UNKNOWN';
+
+  try {
+    // Step 1: Classify lead type (OWNER vs CLIENT)
+    leadType = await geminiService.classifyLeadType({ title, description });
+    console.log('[AI] Lead classified as:', leadType);
+
+    // Step 2: If OWNER, analyze intent score and detect agents
+    if (leadType === 'OWNER') {
+      console.log('[AI] Analyzing OWNER lead...');
+
+      intentScore = await geminiService.analyzeIntentScore({
+        title,
+        description,
+        author_name: authorName,
+      });
+      console.log('[AI] Intent score:', intentScore);
+
+      const listingText = `${title} ${description} ${authorName}`;
+      if (hasStrongAgencySignal(listingText)) {
+        agentDecision = 'AGENT';
+        isAgent = true;
+        console.log('[Filter] Strong agency signal detected:', authorName);
+      } else {
+        agentDecision = await geminiService.detectAgent({
+          title,
+          description,
+          author_name: authorName,
+        });
+        isAgent = agentDecision === 'AGENT';
+      }
+      console.log('[AI] Agent decision:', agentDecision);
+    } else {
+      console.log('[AI] CLIENT lead - skipping intent/agent analysis');
+    }
+  } catch (error) {
+    console.error('[AI] Error during AI analysis:', error);
+    // Continue with defaults if AI fails
+  }
+
+  // Fallback: ensure OWNER leads always have an intent score
+  if (leadType === 'OWNER' && intentScore === null) {
+    intentScore = 5; // Neutral score when AI analysis fails
+    console.log('[AI] Fallback intent score applied: 5');
+  }
+
+  return { leadType, intentScore, isAgent, agentDecision };
+}
+
 function getGroupFilterPolicy(
   scrapeSource: string,
   groupConfigs: Array<{
@@ -296,6 +305,121 @@ function getGroupFilterPolicy(
     excludeAgents: group?.exclude_agents,
     minimumIntentScore: group?.minimum_intent_score,
   });
+}
+
+/**
+ * Detect which configured Marketplace search a listing came from, tagging
+ * the lead the same way group posts are tagged with their group name.
+ */
+function detectMarketplaceScrapeSource(
+  facebookUrl: string,
+  marketplaceConfigs: Array<{ name: string; url: string }>
+): string {
+  const match = marketplaceConfigs.find((config) => config.url === facebookUrl);
+  return match ? `FACEBOOK_MARKETPLACE:${match.name}` : 'FACEBOOK_MARKETPLACE';
+}
+
+function getMarketplaceFilterPolicy(
+  scrapeSource: string,
+  marketplaceConfigs: Array<{
+    name: string;
+    owner_only?: boolean;
+    exclude_agents?: boolean;
+    minimum_intent_score?: number;
+  }>
+): LeadFilterPolicy {
+  const configName = scrapeSource.startsWith('FACEBOOK_MARKETPLACE:')
+    ? scrapeSource.replace('FACEBOOK_MARKETPLACE:', '')
+    : '';
+  const config = marketplaceConfigs.find((c) => c.name === configName);
+
+  return policyFromGroup({
+    ownerOnly: config?.owner_only,
+    excludeAgents: config?.exclude_agents,
+    minimumIntentScore: config?.minimum_intent_score,
+  });
+}
+
+type MarketplaceItem = {
+  listingUrl?: string;
+  url?: string;
+  facebookUrl?: string;
+  id?: string;
+  marketplace_listing_title?: string;
+  custom_title?: string;
+  description?: string;
+  listing_price?: { amount?: string; formatted_amount?: string };
+  location?: { reverse_geocode?: { city?: string; state?: string; city_page?: { display_name?: string } } };
+  primary_listing_photo?: { image?: { uri?: string } };
+  marketplace_listing_seller?: { name?: string; id?: string };
+  is_sold?: boolean;
+  is_live?: boolean;
+};
+
+/**
+ * Map an apify/facebook-marketplace-scraper dataset item to our Lead structure.
+ * Field names are based on the actor's documented output sample — verify
+ * against a real run and adjust if Facebook changes the schema.
+ */
+async function mapMarketplaceItemToLead(
+  item: MarketplaceItem,
+  marketplaceConfigs: Array<{
+    name: string;
+    url: string;
+    owner_only?: boolean;
+    exclude_agents?: boolean;
+    minimum_intent_score?: number;
+  }>
+) {
+  const title = item.marketplace_listing_title || item.custom_title || 'No title';
+  const description = item.description || '';
+  const authorName = item.marketplace_listing_seller?.name || 'Unknown';
+  const authorId = item.marketplace_listing_seller?.id || null;
+
+  const priceAmount = item.listing_price?.amount ? parseFloat(item.listing_price.amount) : null;
+  const price = priceAmount !== null && !Number.isNaN(priceAmount)
+    ? Math.round(priceAmount)
+    : parsePriceString(item.listing_price?.formatted_amount);
+
+  const location =
+    item.location?.reverse_geocode?.city_page?.display_name ||
+    item.location?.reverse_geocode?.city ||
+    null;
+
+  const imageUrls: string[] = [];
+  if (item.primary_listing_photo?.image?.uri) {
+    imageUrls.push(item.primary_listing_photo.image.uri);
+  }
+
+  const phone = extractPhoneNumber(description);
+  const postUrl = item.listingUrl || item.url || `https://www.facebook.com/marketplace/item/${item.id || Date.now()}`;
+  const scrapeSource = detectMarketplaceScrapeSource(item.facebookUrl || '', marketplaceConfigs);
+
+  const { leadType, intentScore, isAgent, agentDecision } = await classifyAndScoreLead(
+    title,
+    description,
+    authorName
+  );
+
+  return {
+    post_url: postUrl,
+    title,
+    description,
+    author_name: authorName,
+    author_id: authorId,
+    location,
+    phone,
+    price,
+    image_urls: imageUrls,
+    images_downloaded: false,
+    status: 'NEW',
+    scrape_source: scrapeSource,
+    created_at: new Date().toISOString(),
+    lead_type: leadType,
+    intent_score: intentScore,
+    is_agent: isAgent,
+    agent_decision: agentDecision,
+  };
 }
 
 /**
@@ -347,11 +471,16 @@ export async function POST(request: NextRequest) {
     console.warn('[Webhook] WEBHOOK_SECRET not set — skipping auth (configure in Vercel env vars)');
   }
 
+  // Groups and Marketplace runs point at the same webhook URL with a
+  // `source` query param (Apify's payloadTemplate placeholders don't
+  // reliably interpolate for ad-hoc webhooks, so we can't rely on the body).
+  const source = request.nextUrl.searchParams.get('source') === 'MARKETPLACE' ? 'MARKETPLACE' : 'GROUPS';
+
   try {
     // Parse webhook payload
     const payload = await request.json();
 
-    console.log('[Webhook] ===== APIFY WEBHOOK RECEIVED =====');
+    console.log('[Webhook] ===== APIFY WEBHOOK RECEIVED (source:', source, ') =====');
     console.log('[Webhook] Full payload:', JSON.stringify(payload, null, 2));
 
     // Apify's default webhook payload shape is:
@@ -387,7 +516,7 @@ export async function POST(request: NextRequest) {
           completedAt: finishedAt ? new Date(finishedAt) : new Date(),
           duration: duration,
           errorMessage: `Scraping run status: ${status}`,
-          source: 'FACEBOOK_GROUPS',
+          source: source === 'MARKETPLACE' ? 'FACEBOOK_MARKETPLACE' : 'FACEBOOK_GROUPS',
         });
         console.log('[Webhook] Failure email notification sent');
       } catch (emailError) {
@@ -424,13 +553,14 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Webhook] Dataset fetched — ${items.length} items found`);
 
-    // Phase 7: Fetch group configs for source detection
-    const { data: groupConfigs, error: groupsErr } = await supabase
-      .from('group_configs')
+    // Fetch the relevant source configs (group names or marketplace search names)
+    const configTable = source === 'MARKETPLACE' ? 'marketplace_search_configs' : 'group_configs';
+    const { data: sourceConfigs, error: configsErr } = await supabase
+      .from(configTable)
       .select('name, url, owner_only, exclude_agents, minimum_intent_score');
-    if (groupsErr) console.warn('[Webhook] Could not load group_configs:', groupsErr.message);
-    const groups = groupConfigs || [];
-    console.log(`[Webhook] Loaded ${groups.length} group configs for source detection`);
+    if (configsErr) console.warn(`[Webhook] Could not load ${configTable}:`, configsErr.message);
+    const groups = sourceConfigs || [];
+    console.log(`[Webhook] Loaded ${groups.length} ${configTable} entries for source detection`);
 
     // Process each item
     let newLeads = 0;
@@ -449,9 +579,10 @@ export async function POST(request: NextRequest) {
         // wasting Gemini calls (and Vercel function time) on posts we
         // already have, which was causing the whole webhook to time out
         // and never persist anything when a run returned many items.
-        // Use `url` (the post's own permalink), NOT `facebookUrl` (the group's
-        // URL, identical for every post in that group).
-        const rawPostUrl = (item.url as string | undefined) || '';
+        // Use the item's own permalink (`url` for group posts, `listingUrl`
+        // for Marketplace listings), NOT `facebookUrl` (identical for every
+        // item in the same group/search batch).
+        const rawPostUrl = (item.listingUrl as string | undefined) || (item.url as string | undefined) || '';
         if (rawPostUrl && (await leadExists(rawPostUrl))) {
           console.log('[Webhook] Duplicate (pre-AI), skipping:', rawPostUrl);
           duplicates++;
@@ -459,7 +590,10 @@ export async function POST(request: NextRequest) {
         }
 
         // Map to our lead structure (with AI classification)
-        const { agent_decision: agentDecision, ...lead } = await mapApifyItemToLead(item, groups);
+        const { agent_decision: agentDecision, ...lead } =
+          source === 'MARKETPLACE'
+            ? await mapMarketplaceItemToLead(item, groups)
+            : await mapApifyItemToLead(item, groups);
 
         // Skip if no post URL (invalid data)
         if (!lead.post_url) {
@@ -480,7 +614,9 @@ export async function POST(request: NextRequest) {
         const filterResult = shouldStoreLead(
           lead,
           agentDecision,
-          getGroupFilterPolicy(lead.scrape_source, groups)
+          source === 'MARKETPLACE'
+            ? getMarketplaceFilterPolicy(lead.scrape_source, groups)
+            : getGroupFilterPolicy(lead.scrape_source, groups)
         );
 
         if (!filterResult.accepted) {
@@ -509,7 +645,7 @@ export async function POST(request: NextRequest) {
     // Log scraping job to database
     try {
       await supabase.from('scraping_jobs').insert({
-        source: 'apify',
+        source: source === 'MARKETPLACE' ? 'apify-marketplace' : 'apify-groups',
         status: 'COMPLETED',
         leads_found: newLeads,
         started_at: startedAt,
@@ -552,7 +688,7 @@ export async function POST(request: NextRequest) {
         startedAt: new Date(startedAt),
         completedAt: new Date(finishedAt),
         duration: duration,
-        source: 'FACEBOOK_GROUPS',
+        source: source === 'MARKETPLACE' ? 'FACEBOOK_MARKETPLACE' : 'FACEBOOK_GROUPS',
       });
       console.log('[Webhook] Email notification sent successfully');
     } catch (emailError) {

@@ -50,6 +50,18 @@ export interface GroupConfig {
   updated_at: string;
 }
 
+export interface MarketplaceSearchConfig {
+  id: string;
+  name: string;
+  url: string;
+  is_active: boolean;
+  owner_only: boolean;
+  exclude_agents: boolean;
+  minimum_intent_score: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface LeadImage {
   id: string;
   lead_id: string;
